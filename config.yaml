@@ -11,12 +11,17 @@ models:
   strong_fallback: openai/gpt-oss-120b
 
 embedding:
-  # Resolved against fastembed's TextEmbedding.list_supported_models().
-  # First entry that is available wins.
+  # Resolved against fastembed's TextEmbedding.list_supported_models(); the first
+  # available entry wins. MiniLM is the default because it is 0.22 GB and this
+  # bot reloads the model on every 10-minute CI run — the larger models below are
+  # better but not 5x better, and e5 is only offered in a 2.24 GB size.
+  # If you move to an always-on VPS, promote mpnet or e5-large to the top.
   candidates:
-    - intfloat/multilingual-e5-small
-    - sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-  # e5 models require these prefixes; blanked automatically for non-e5 models.
+    - sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2  # 0.22 GB, dim 384
+    - sentence-transformers/paraphrase-multilingual-mpnet-base-v2  # 1.0 GB,  dim 768
+    - intfloat/multilingual-e5-large                               # 2.24 GB, dim 1024
+  # e5 models need these prefixes to work properly. Applied only when the
+  # resolved model is an e5 one; blank for everything else.
   query_prefix: "query: "
   passage_prefix: "passage: "
 

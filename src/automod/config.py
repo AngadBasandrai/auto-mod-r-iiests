@@ -100,6 +100,15 @@ def ensure_dirs() -> None:
 
 
 def setup_logging() -> None:
+    # Log lines quote chat text, which is full of emoji and Devanagari. The
+    # Windows console is cp1252 by default and would raise on both.
+    import sys
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
     logging.basicConfig(
         level=getattr(logging, settings.log_level, logging.INFO),
         format="%(asctime)s %(levelname)-7s %(name)s | %(message)s",

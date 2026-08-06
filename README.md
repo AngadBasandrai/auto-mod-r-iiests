@@ -45,7 +45,7 @@ correctly yield nothing.
 | Choice | Reason |
 |---|---|
 | Groq for all LLM work | `llama-3.1-8b-instant` is cheap enough to run over ~1,300 chat windows; `llama-3.3-70b-versatile` writes noticeably better Hinglish |
-| `fastembed` for vectors | Groq has no embeddings endpoint. fastembed runs `multilingual-e5-small` through ONNX Runtime — no PyTorch, ~50 MB, identical locally and on a CI runner |
+| `fastembed` for vectors | Groq has no embeddings endpoint. fastembed runs `paraphrase-multilingual-MiniLM-L12-v2` (0.22 GB) through ONNX Runtime — no PyTorch, and identical locally and on a CI runner that reloads it every 10 minutes. Bigger multilingual models are listed in `config.yaml` if you move to an always-on host |
 | Hybrid BM25 + dense | Dense alone fumbles proper nouns ("Sanaka", "Part-II", branch codes); BM25 alone fumbles transliteration — "hostel fees kitni hai" shares almost no tokens with "What does accommodation cost?" |
 | numpy, not a vector DB | A few thousand rows. A dot product is exact and instant; anything heavier is ceremony |
 | Pseudonyms before extraction | Real names never reach the model — the biggest PII leak is closed by construction, not by filtering |
