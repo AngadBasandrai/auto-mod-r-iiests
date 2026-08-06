@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# SECRETS
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# PRIVATE SOURCE DATA -- never commit. The WhatsApp export lives here and it
+# contains real people's messages, names and phone numbers.
+# ---------------------------------------------------------------------------
+data/raw/
+data/cache/
+data/feedback.jsonl
+
+# Committed on purpose (the distilled, PII-scrubbed corpus + built index):
+#   data/corpus/*.jsonl
+#   data/index/*
+#   data/state/seen.json
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ---------------------------------------------------------------------------
+# Models / misc
+# ---------------------------------------------------------------------------
+.fastembed_cache/
+*.log
+.DS_Store
+Thumbs.db
