@@ -1,0 +1,78 @@
+name: bot
+
+# Free 24/7 operation without a server. GitHub's cron minimum is 5 minutes and
+# scheduled runs are delayed under load, so real-world latency is ~10-20 min.
+#
+# Scheduled workflows on public repos are auto-disabled after 60 days with no
+# repository activity. The seen.json commit at the end of each run counts as
+# activity, so this workflow keeps itself alive.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Log replies without posting them"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+# Never let two runs answer the same post at once.
+concurrency:
+  group: reddit-bot
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: .fastembed_cache
+          key: fastembed-${{ hashFiles('config.yaml') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Poll and answer
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+          # Scheduled runs go live; manual runs default to a dry run.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: python scripts/run_bot.py
+
+      - name: Persist state
+        if: always()
+        run: |
+          if [[ -z "$(git status --porcelain data/state)" ]]; then
+            echo "No state change."
+            exit 0
+          fi
+          git config user.name  "iiests-faq-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/state
+          git commit -m "state: bot run $(date -u +%Y-%m-%dT%H:%MZ)"
+          # Another run may have pushed while we worked.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && \
+            git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            echo "Push attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          echo "Could not persist state; the next run will re-derive it from Reddit."

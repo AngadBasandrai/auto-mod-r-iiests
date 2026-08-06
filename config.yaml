@@ -1,0 +1,78 @@
+# Non-secret tuning knobs. Secrets live in .env.
+
+subreddit: iiests
+
+models:
+  # Cheap + fast: runs over thousands of chat windows, query normalization, reranking.
+  fast: llama-3.1-8b-instant
+  # Strong: the final user-facing answer. Handles Hindi/Hinglish generation better.
+  strong: llama-3.3-70b-versatile
+  # Used if `strong` is unavailable / rate limited.
+  strong_fallback: openai/gpt-oss-120b
+
+embedding:
+  # Resolved against fastembed's TextEmbedding.list_supported_models().
+  # First entry that is available wins.
+  candidates:
+    - intfloat/multilingual-e5-small
+    - sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  # e5 models require these prefixes; blanked automatically for non-e5 models.
+  query_prefix: "query: "
+  passage_prefix: "passage: "
+
+ingest:
+  reddit:
+    wiki_pages: [index, faq, config/sidebar]
+    top_limit: 300
+    top_time_filter: all
+    min_score: 3
+    max_comments_per_post: 3
+    min_comment_score: 2
+    min_answer_chars: 80
+  whatsapp:
+    # New conversation window when the gap exceeds this...
+    session_gap_minutes: 45
+    # ...or when it grows past this many messages.
+    session_max_messages: 25
+    # Overlap so a question at a window boundary keeps its answer.
+    session_overlap: 3
+
+curate:
+  # Extracted pairs below this are discarded.
+  min_confidence: 0.6
+  # Cosine similarity above which two questions are treated as duplicates.
+  dedupe_threshold: 0.93
+  extract_workers: 8
+
+retrieval:
+  bm25_top_k: 30
+  dense_top_k: 30
+  rrf_k: 60
+  rerank_candidates: 12
+  final_k: 5
+
+answer:
+  # Reply only when the reranked top score clears this...
+  min_confidence: 0.7
+  # ...and at least this many records support the answer.
+  min_supporting: 2
+  max_answer_chars: 1800
+  footer: |
+
+    ---
+    ^(I'm a bot answering from the r/iiests FAQ and community knowledge. I can be
+    wrong — check with a human for anything important. Reply `!badbot` to remove this
+    comment.)
+
+bot:
+  trigger_flairs: [Ask, Question, Admissions, Doubt]
+  # Reply to any brand-new post that clears the confidence gate, flair or not.
+  auto_reply_unflaired: true
+  new_posts_limit: 50
+  mentions_limit: 25
+  # Never touch anything older than this. Stops a first-run backfill spam disaster.
+  max_post_age_minutes: 120
+  max_replies_per_run: 3
+  max_replies_per_hour: 8
+  # Comment bodies containing any of these (from OP or a mod) delete the bot's reply.
+  removal_triggers: ["!badbot", "!delete", "bad bot"]
