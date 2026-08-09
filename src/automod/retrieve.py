@@ -150,8 +150,10 @@ def is_confident(hits: list[Hit]) -> bool:
     top, supporting = confidence(hits)
     if top < config.get("answer.min_confidence", 0.7):
         return False
-    # One mod-curated entry that nails the question is enough on its own;
-    # otherwise we want corroboration before speaking.
-    if top >= 0.9 and hits[0].record.source in {"reddit_wiki", "reddit_pinned"}:
+    # One curated entry that nails the question is enough on its own; otherwise
+    # we want corroboration before speaking. The student wiki qualifies: it is
+    # written as documentation and its entries are quoted verbatim, unlike a
+    # chat message that a model had to interpret.
+    if top >= 0.9 and hits[0].record.source in {"reddit_wiki", "reddit_pinned", "student_wiki"}:
         return True
     return supporting >= config.get("answer.min_supporting", 2)

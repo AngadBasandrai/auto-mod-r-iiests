@@ -21,7 +21,8 @@ log = logging.getLogger(__name__)
 
 SYSTEM = """You answer questions from students about IIEST Shibpur, on the subreddit
 r/iiests. You are given context entries drawn from the subreddit's own FAQ, wiki
-and past threads, plus knowledge shared by current students.
+and past threads, the student-run IIEST wiki, plus knowledge shared by current
+students.
 
 Return JSON:
 {
@@ -69,6 +70,7 @@ def _format_context(hits: list[Hit]) -> str:
             "reddit_wiki": "subreddit wiki",
             "reddit_pinned": "pinned FAQ post",
             "reddit_thread": "past thread",
+            "student_wiki": "IIEST student wiki",
             "whatsapp": "student community knowledge",
         }.get(record.source, record.source)
         blocks.append(

@@ -34,6 +34,43 @@ ingest:
     max_comments_per_post: 3
     min_comment_score: 2
     min_answer_chars: 80
+  wiki:
+    # The student-run IIEST wiki. Pages are discovered from its sitemap.xml, so
+    # new pages are picked up automatically on the next reindex.
+    enabled: true
+    base_url: https://iiest-town.github.io/
+    # Nothing answerable on these: a search box, a photo grid, and editor
+    # instructions that would otherwise be extracted as if they were facts.
+    skip_paths: [search, gallery, contribute]
+    # Half-written sections are common on a young wiki; below this many
+    # characters a section is a stub, not an answer.
+    min_section_chars: 20
+    # Most of the wiki is still a skeleton: section headings whose body is a
+    # checklist for whoever fills the page in later ("Add official GAABESU
+    # links", "Track academic calendar links"). Those are instructions to
+    # editors, not answers to students, and extracting them would produce
+    # confident-sounding nonsense. Matched case-insensitively against the whole
+    # heading. Delete entries here as the wiki fills in.
+    skip_headings:
+      - "fill this page"
+      - "pages? to fill"
+      - "to fill"
+      - "how to help"
+      - "contribut(e|ing|ors)"
+      - "add.*"
+      - "maintain"
+      - "track"
+      - "document"
+      - "what belongs here"
+      - "listing format"
+      - "format"
+      - "template"
+      - "people"
+      - "photos"
+      - "sources?"
+    # Be a polite crawler. 29 pages, so this costs ~15 seconds total.
+    delay_seconds: 0.5
+
   whatsapp:
     # New conversation window when the gap exceeds this...
     session_gap_minutes: 45

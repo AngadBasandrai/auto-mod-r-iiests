@@ -67,12 +67,17 @@ def main() -> int:
     log.info("Loaded %d WhatsApp pairs", len(whatsapp_pairs))
     reddit_pairs = build_corpus.pairs_from_reddit()
     log.info("Loaded %d Reddit pairs", len(reddit_pairs))
+    wiki_pairs = build_corpus.pairs_from_wiki()
+    log.info("Loaded %d student-wiki pairs", len(wiki_pairs))
 
-    if not whatsapp_pairs and not reddit_pairs:
-        log.error("Nothing to build. Run scripts/ingest_whatsapp.py and/or scripts/ingest_reddit.py first.")
+    if not whatsapp_pairs and not reddit_pairs and not wiki_pairs:
+        log.error(
+            "Nothing to build. Run scripts/ingest_whatsapp.py, scripts/ingest_reddit.py "
+            "and/or scripts/ingest_wiki.py first."
+        )
         return 1
 
-    build_corpus.build(whatsapp_pairs, reddit_pairs)
+    build_corpus.build(whatsapp_pairs, reddit_pairs, wiki_pairs)
     log.info("Next: python scripts/build_corpus.py --check, then python scripts/build_index.py")
     return 0
 

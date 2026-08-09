@@ -28,6 +28,7 @@ STATE_DIR = DATA / "state"
 QA_PATH = CORPUS_DIR / "qa.jsonl"
 REDDIT_RAW_PATH = CORPUS_DIR / "reddit.jsonl"
 WHATSAPP_RAW_PATH = CORPUS_DIR / "whatsapp.jsonl"
+WIKI_RAW_PATH = CORPUS_DIR / "wiki.jsonl"
 SEEN_PATH = STATE_DIR / "seen.json"
 FEEDBACK_PATH = DATA / "feedback.jsonl"
 

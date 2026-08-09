@@ -38,6 +38,9 @@ jobs:
           REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
         run: python scripts/ingest_reddit.py
 
+      - name: Pull the student wiki
+        run: python scripts/ingest_wiki.py
+
       - name: Rebuild corpus and index
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
