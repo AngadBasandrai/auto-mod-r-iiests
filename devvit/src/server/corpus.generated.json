@@ -1,0 +1,56 @@
+[
+  {
+    "question": "What are the mess fees?",
+    "question_original": "mess fees kitni hai",
+    "answer": "Mess fees are approximately Rs 27,700, paid through the hostel portal.",
+    "topic": "hostels",
+    "source": "student_wiki",
+    "ref": "https://iiest-town.github.io/hostels/#food",
+    "confidence": 0.9
+  },
+  {
+    "question": "What is the hostel in-time for first year students?",
+    "question_original": "hostel in time kya hai",
+    "answer": "For the first two months the hostel in-time is 7PM, irrespective of gender. It is extended to 10PM afterwards for the rest of the year.",
+    "topic": "hostels",
+    "source": "student_wiki",
+    "ref": "https://iiest-town.github.io/hostels/#in-time",
+    "confidence": 0.9
+  },
+  {
+    "question": "What room types are available in the hostels?",
+    "question_original": "hostel me kaunse room milte hai",
+    "answer": "First year hostels are majorly 4-seater. Each boys hostel also has some 5-seater rooms, which are larger and have an attached balcony. H-10 has two 8-seater rooms.",
+    "topic": "hostels",
+    "source": "student_wiki",
+    "ref": "https://iiest-town.github.io/hostels/#room-types",
+    "confidence": 0.9
+  },
+  {
+    "question": "How far from home do you need to live to be eligible for a hostel?",
+    "question_original": "hostel ke liye distance kitna chahiye",
+    "answer": "In round 1 of hostel allotments the minimum distance limit was previously 150km.",
+    "topic": "hostels",
+    "source": "student_wiki",
+    "ref": "https://iiest-town.github.io/hostels/#home-distance-eligibility",
+    "confidence": 0.9
+  },
+  {
+    "question": "How many halls are there and who lives in them?",
+    "question_original": "halls kitne hai",
+    "answer": "There are 5 halls for boys (Wolfenden, Richardson, MacDonalds, Sen, Sengupta) and 2 for girls (Pandya and Lt. William). Boys halls are generally for fourth years plus a few third years and college senate position holders, and are usually 1 or 2 seaters.",
+    "topic": "hostels",
+    "source": "student_wiki",
+    "ref": "https://iiest-town.github.io/hostels/#halls-and-new-hostels",
+    "confidence": 0.9
+  },
+  {
+    "question": "Can I bring electronics to the hostel?",
+    "question_original": "hostel me electronics le ja sakte hai",
+    "answer": "You can bring what you want. Rooms have 4 sockets each, so an extension cord is worth carrying.",
+    "topic": "hostels",
+    "source": "student_wiki",
+    "ref": "https://iiest-town.github.io/hostels/#electronics-usability",
+    "confidence": 0.9
+  }
+]

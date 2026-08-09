@@ -237,7 +237,8 @@ def load_corpus(path: Path | None = None) -> list[dict]:
     if not path.exists():
         raise FileNotFoundError(
             f"No corpus at {path}. Run the ingest scripts first "
-            "(scripts/ingest_whatsapp.py, scripts/ingest_reddit.py)."
+            "(scripts/ingest_whatsapp.py, scripts/ingest_reddit.py, "
+            "scripts/ingest_wiki.py), then scripts/build_corpus.py."
         )
     return [
         json.loads(line)

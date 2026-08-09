@@ -1,0 +1,74 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "iiests-faq-bot",
+
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.js"
+  },
+
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch"
+  },
+
+  "dev": {
+    "subreddit": "iiests"
+  },
+
+  "permissions": {
+    "http": {
+      "enable": true,
+      "domains": ["api.groq.com"]
+    },
+    "redis": true
+  },
+
+  "triggers": {
+    "onPostSubmit": "/internal/triggers/post-submit",
+    "onCommentCreate": "/internal/triggers/comment-create",
+    "onMentionInCommentCreate": "/internal/triggers/mention"
+  },
+
+  "settings": {
+    "global": {
+      "groqApiKey": {
+        "type": "string",
+        "label": "Groq API key",
+        "helpText": "From https://console.groq.com/keys. Used for query normalization, reranking and answer generation.",
+        "isSecret": true
+      }
+    },
+    "subreddit": {
+      "dryRun": {
+        "type": "boolean",
+        "label": "Dry run",
+        "helpText": "Log the reply the bot would post without posting it. Leave this ON until you have read a few runs.",
+        "defaultValue": true
+      },
+      "autoReplyUnflaired": {
+        "type": "boolean",
+        "label": "Answer unflaired posts",
+        "helpText": "Off means only posts flaired Ask, Question, Admissions or Doubt are answered.",
+        "defaultValue": false
+      },
+      "minConfidence": {
+        "type": "number",
+        "label": "Minimum confidence",
+        "helpText": "Reranked top score a post must clear before the bot replies. Raise this if it is too chatty.",
+        "defaultValue": 0.7
+      },
+      "maxRepliesPerHour": {
+        "type": "number",
+        "label": "Max replies per hour",
+        "defaultValue": 8
+      },
+      "maxPostAgeMinutes": {
+        "type": "number",
+        "label": "Max post age (minutes)",
+        "helpText": "Never touch anything older than this.",
+        "defaultValue": 120
+      }
+    }
+  }
+}

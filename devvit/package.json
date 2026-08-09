@@ -1,0 +1,25 @@
+{
+  "name": "iiests-faq-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "corpus": "python ../scripts/export_corpus_json.py",
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "login": "devvit login",
+    "playtest": "npm run build && devvit playtest",
+    "upload": "npm run build && devvit upload"
+  },
+  "dependencies": {
+    "@devvit/web": "0.13.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "devvit": "0.13.11",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

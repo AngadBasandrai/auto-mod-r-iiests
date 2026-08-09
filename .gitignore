@@ -32,6 +32,19 @@ env/
 .mypy_cache/
 
 # ---------------------------------------------------------------------------
+# Devvit app
+# ---------------------------------------------------------------------------
+devvit/node_modules/
+devvit/dist/
+devvit/.devvit/
+
+# Committed on purpose:
+#   devvit/src/server/corpus.generated.json  -- the knowledge base has to be in
+#   the repo for `devvit upload` to build from a clean checkout, same reason
+#   data/corpus/qa.jsonl is committed. Regenerate with
+#   scripts/export_corpus_json.py, never edit by hand.
+
+# ---------------------------------------------------------------------------
 # Models / misc
 # ---------------------------------------------------------------------------
 .fastembed_cache/
