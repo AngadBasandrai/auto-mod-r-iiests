@@ -115,5 +115,8 @@ def setup_logging() -> None:
         format="%(asctime)s %(levelname)-7s %(name)s | %(message)s",
         datefmt="%H:%M:%S",
     )
-    # PRAW is chatty about rate-limit sleeps at DEBUG.
-    logging.getLogger("prawcore").setLevel(logging.WARNING)
+    # These log one line per HTTP request at INFO. Over a multi-hour extraction
+    # that buries the progress output, and a paced 429 during warm-up reads as a
+    # failure when it is the limiter doing its job.
+    for noisy in ("prawcore", "httpx", "httpcore", "groq._base_client"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)

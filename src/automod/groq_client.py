@@ -64,6 +64,12 @@ class _TpmLimiter:
         self._lock = threading.Condition()
         self._limit: int | None = None
         self._spent: deque[tuple[float, int]] = deque()
+        # Requests that have been admitted but whose headers have not come back
+        # yet. Kept apart from the ledger because observe() overwrites the
+        # ledger with the server's count, and that count cannot yet include
+        # anything still in flight — folding the two together lets concurrent
+        # workers each believe there is budget for them.
+        self._inflight = 0
 
     def _prune(self, now: float) -> None:
         while self._spent and now - self._spent[0][0] > self.WINDOW:
@@ -71,7 +77,7 @@ class _TpmLimiter:
 
     def _used(self, now: float) -> int:
         self._prune(now)
-        return sum(tokens for _, tokens in self._spent)
+        return sum(tokens for _, tokens in self._spent) + self._inflight
 
     def acquire(self, estimate: int) -> None:
         """Block until `estimate` tokens fit in the current window."""
@@ -79,19 +85,36 @@ class _TpmLimiter:
             while True:
                 limit = self._limit
                 if limit is None:
-                    # Nothing learned yet. Let the first request through so the
-                    # headers can teach us the limit.
-                    self._spent.append((time.monotonic(), estimate))
-                    return
+                    # Nothing learned yet. One request goes through unpaced so
+                    # the headers can teach us the limit; the rest wait for it.
+                    if self._inflight == 0:
+                        self._inflight += estimate
+                        return
+                    self._lock.wait(timeout=5.0)
+                    continue
                 now = time.monotonic()
                 used = self._used(now)
-                if used + estimate <= limit or not self._spent:
-                    self._spent.append((now, estimate))
+                if used + estimate <= limit:
+                    self._inflight += estimate
                     return
-                # Wait exactly until the oldest entry leaves the window.
-                wait = self.WINDOW - (now - self._spent[0][0]) + 0.05
+                if not self._spent and self._inflight == 0:
+                    # A single request larger than the whole limit. Let it
+                    # through rather than deadlock; the API will judge it.
+                    self._inflight += estimate
+                    return
+                wait = (
+                    self.WINDOW - (now - self._spent[0][0]) + 0.05
+                    if self._spent
+                    else 1.0
+                )
                 log.debug("TPM pacer: %d/%d used, sleeping %.1fs", used, limit, wait)
-                self._lock.wait(timeout=max(0.05, wait))
+                self._lock.wait(timeout=max(0.05, min(wait, 5.0)))
+
+    def release(self, estimate: int) -> None:
+        """Drop an in-flight reservation once the request has settled."""
+        with self._lock:
+            self._inflight = max(0, self._inflight - estimate)
+            self._lock.notify_all()
 
     def observe(self, headers: Any) -> None:
         """Learn the real limit and true usage from a response's headers."""
@@ -106,11 +129,11 @@ class _TpmLimiter:
             return
         with self._lock:
             if self._limit != limit:
-                log.info("Groq token limit: %d per minute", limit)
+                log.info("Groq token limit: %d tokens/minute", limit)
                 self._limit = limit
-            # Replace our estimate-based ledger with what the server actually
-            # counted. One entry, timestamped now, is close enough — the window
-            # is rolling either way.
+            # Replace the estimate-based ledger with what the server actually
+            # counted. One entry timestamped now is close enough — the window is
+            # rolling either way, and in-flight requests are tracked separately.
             self._spent.clear()
             self._spent.append((time.monotonic(), max(0, limit - remaining)))
             self._lock.notify_all()
@@ -146,7 +169,8 @@ def _model(kind: str) -> str:
     reraise=True,
 )
 def _create(model: str, messages: list[dict[str, str]], **kwargs: Any) -> str:
-    _limiter.acquire(_estimate_tokens(messages, int(kwargs.get("max_tokens", 1024))))
+    estimate = _estimate_tokens(messages, int(kwargs.get("max_tokens", 1024)))
+    _limiter.acquire(estimate)
     try:
         raw = client().chat.completions.with_raw_response.create(
             model=model, messages=messages, **kwargs
@@ -156,8 +180,11 @@ def _create(model: str, messages: list[dict[str, str]], **kwargs: Any) -> str:
         # retry waits for real budget instead of a fixed backoff.
         _limiter.observe(getattr(getattr(exc, "response", None), "headers", None))
         raise
-    _limiter.observe(raw.headers)
-    return raw.parse().choices[0].message.content or ""
+    else:
+        _limiter.observe(raw.headers)
+        return raw.parse().choices[0].message.content or ""
+    finally:
+        _limiter.release(estimate)
 
 
 def chat(

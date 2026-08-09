@@ -17,6 +17,7 @@ import hashlib
 import json
 import logging
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable
@@ -208,12 +209,20 @@ def extract_window(window: Window) -> list[dict]:
     return [scrub_record(p) for p in pairs]
 
 
+def _format_duration(minutes: float) -> str:
+    if minutes < 1:
+        return "under a minute"
+    if minutes < 90:
+        return f"{minutes:.0f} min"
+    return f"{minutes / 60:.1f} h"
+
+
 def extract_all(
     windows: Iterable[Window],
     *,
     cache_path: Path | None = None,
     workers: int | None = None,
-    progress_every: int = 25,
+    progress_every: int = 10,
 ) -> list[dict]:
     """Extract from every window, in parallel, resuming from cache."""
     windows = list(windows)
@@ -230,6 +239,8 @@ def extract_all(
     )
 
     done = 0
+    found = 0
+    started = time.monotonic()
     if todo:
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {pool.submit(extract_window, w): w for w in todo}
@@ -242,8 +253,23 @@ def extract_all(
                     pairs = []
                 cache.put(cache_key(window), pairs)
                 done += 1
+                found += len(pairs)
                 if done % progress_every == 0:
-                    log.info("  %d/%d windows", done, len(todo))
+                    # This run takes hours on the free tier. Without a rate and
+                    # an ETA there is no way to tell a paced run from a stuck
+                    # one, and every line above it is an HTTP log.
+                    elapsed = time.monotonic() - started
+                    rate = done / elapsed * 60
+                    remaining = (len(todo) - done) / max(rate, 0.01)
+                    log.info(
+                        "  %d/%d windows (%.0f%%) · %d pairs · %.1f/min · ~%s left",
+                        done,
+                        len(todo),
+                        100 * done / len(todo),
+                        found,
+                        rate,
+                        _format_duration(remaining),
+                    )
 
     results: list[dict] = []
     for window in windows:
