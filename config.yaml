@@ -84,7 +84,11 @@ curate:
   min_confidence: 0.6
   # Cosine similarity above which two questions are treated as duplicates.
   dedupe_threshold: 0.93
-  extract_workers: 8
+  # The free Groq tier is capped on tokens per minute, not requests, so extra
+  # workers cannot buy throughput — they only collide with each other and with
+  # the pacer in groq_client. A few in flight is enough to hide request latency.
+  # Raise this if you move to a paid tier.
+  extract_workers: 3
 
 retrieval:
   bm25_top_k: 30

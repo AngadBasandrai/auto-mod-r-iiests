@@ -1,8 +1,16 @@
 """Thin wrapper over the Groq chat API.
 
-Adds the three things every call site here needs: retry/backoff on rate limits,
-tolerant JSON parsing (models sometimes wrap JSON in prose or code fences even in
-JSON mode), and a fallback from the strong model to a second one.
+Adds the four things every call site here needs: a tokens-per-minute pacer,
+retry/backoff on rate limits, tolerant JSON parsing (models sometimes wrap JSON
+in prose or code fences even in JSON mode), and a fallback from the strong model
+to a second one.
+
+On the free tier the binding limit is tokens per minute, not requests — 6,000
+TPM against 14,400 requests per day. Firing eight workers at that and letting
+each one back off for 20 seconds wastes most of the wall clock on retries, so
+requests wait for budget here instead of being rejected there. The limit is
+learned from the response headers rather than hardcoded, so a paid tier speeds
+up on its own.
 """
 
 from __future__ import annotations
@@ -11,6 +19,8 @@ import json
 import logging
 import re
 import threading
+import time
+from collections import deque
 from typing import Any, Iterable
 
 from groq import Groq
@@ -30,6 +40,88 @@ _client: Groq | None = None
 _client_lock = threading.Lock()
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
+
+# Groq charges a fraction of max_tokens against the TPM budget up front, whether
+# or not the model generates that much. Measured at roughly 22% on
+# llama-3.1-8b-instant; the pacer self-corrects from the response headers, so
+# this only has to be close enough for the first few calls.
+_OUTPUT_RESERVE_RATIO = 0.25
+_CHARS_PER_TOKEN = 4
+
+
+class _TpmLimiter:
+    """Rolling-window pacer for tokens per minute, shared by every worker.
+
+    Deliberately simple: a 60-second deque of (timestamp, tokens). A request
+    blocks until its estimate fits under the limit. Estimates are corrected
+    against `x-ratelimit-remaining-tokens` after each response, so a bad guess
+    costs one slow minute rather than a run of 429s.
+    """
+
+    WINDOW = 60.0
+
+    def __init__(self) -> None:
+        self._lock = threading.Condition()
+        self._limit: int | None = None
+        self._spent: deque[tuple[float, int]] = deque()
+
+    def _prune(self, now: float) -> None:
+        while self._spent and now - self._spent[0][0] > self.WINDOW:
+            self._spent.popleft()
+
+    def _used(self, now: float) -> int:
+        self._prune(now)
+        return sum(tokens for _, tokens in self._spent)
+
+    def acquire(self, estimate: int) -> None:
+        """Block until `estimate` tokens fit in the current window."""
+        with self._lock:
+            while True:
+                limit = self._limit
+                if limit is None:
+                    # Nothing learned yet. Let the first request through so the
+                    # headers can teach us the limit.
+                    self._spent.append((time.monotonic(), estimate))
+                    return
+                now = time.monotonic()
+                used = self._used(now)
+                if used + estimate <= limit or not self._spent:
+                    self._spent.append((now, estimate))
+                    return
+                # Wait exactly until the oldest entry leaves the window.
+                wait = self.WINDOW - (now - self._spent[0][0]) + 0.05
+                log.debug("TPM pacer: %d/%d used, sleeping %.1fs", used, limit, wait)
+                self._lock.wait(timeout=max(0.05, wait))
+
+    def observe(self, headers: Any) -> None:
+        """Learn the real limit and true usage from a response's headers."""
+        if not headers:
+            return
+        try:
+            limit = int(headers.get("x-ratelimit-limit-tokens") or 0)
+            remaining = int(headers.get("x-ratelimit-remaining-tokens") or 0)
+        except (TypeError, ValueError):
+            return
+        if limit <= 0:
+            return
+        with self._lock:
+            if self._limit != limit:
+                log.info("Groq token limit: %d per minute", limit)
+                self._limit = limit
+            # Replace our estimate-based ledger with what the server actually
+            # counted. One entry, timestamped now, is close enough — the window
+            # is rolling either way.
+            self._spent.clear()
+            self._spent.append((time.monotonic(), max(0, limit - remaining)))
+            self._lock.notify_all()
+
+
+_limiter = _TpmLimiter()
+
+
+def _estimate_tokens(messages: list[dict[str, str]], max_tokens: int) -> int:
+    prompt_chars = sum(len(m.get("content", "")) for m in messages)
+    return prompt_chars // _CHARS_PER_TOKEN + int(max_tokens * _OUTPUT_RESERVE_RATIO)
 
 
 def client() -> Groq:
@@ -54,10 +146,18 @@ def _model(kind: str) -> str:
     reraise=True,
 )
 def _create(model: str, messages: list[dict[str, str]], **kwargs: Any) -> str:
-    response = client().chat.completions.create(
-        model=model, messages=messages, **kwargs
-    )
-    return response.choices[0].message.content or ""
+    _limiter.acquire(_estimate_tokens(messages, int(kwargs.get("max_tokens", 1024))))
+    try:
+        raw = client().chat.completions.with_raw_response.create(
+            model=model, messages=messages, **kwargs
+        )
+    except (RateLimitError, APIStatusError) as exc:
+        # A 429 means our ledger was optimistic. Resync from the headers so the
+        # retry waits for real budget instead of a fixed backoff.
+        _limiter.observe(getattr(getattr(exc, "response", None), "headers", None))
+        raise
+    _limiter.observe(raw.headers)
+    return raw.parse().choices[0].message.content or ""
 
 
 def chat(
