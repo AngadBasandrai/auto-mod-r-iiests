@@ -58,7 +58,12 @@ def test_find_leaks_flags_and_clears():
 import tempfile  # noqa: E402
 from pathlib import Path  # noqa: E402
 
-from automod.curate.build_corpus import apply_blocklist, drop_personal_rows, load_blocklist  # noqa: E402
+from automod.curate.build_corpus import (  # noqa: E402
+    apply_blocklist,
+    drop_boilerplate_answers,
+    drop_personal_rows,
+    load_blocklist,
+)
 
 
 def _row(question: str, answer: str = "some answer text here") -> dict:
@@ -104,3 +109,22 @@ def test_malformed_pattern_is_skipped_not_fatal():
             "# a comment\n\nvalid pattern\n[unclosed\n", encoding="utf-8"
         )
         assert len(load_blocklist(path)) == 1
+
+
+def test_drops_answers_reused_across_many_questions():
+    boilerplate = "A practical index for hostel life, rules and photos."
+    rows = [
+        _row("What types of rooms are there?", boilerplate),
+        _row("How clean are the hostels?", boilerplate),
+        _row("What are the hostel rules?", boilerplate),
+        _row("What is the mess fee?", "The mess fee is 27.7k."),
+    ]
+    kept = drop_boilerplate_answers(rows)
+    assert len(kept) == 1
+    assert "27.7k" in kept[0]["answer"]
+
+
+def test_keeps_an_answer_repeated_only_twice():
+    # Two near-duplicates are dedupe's job, not a boilerplate signal.
+    rows = [_row("Q one?", "Same answer text."), _row("Q two?", "Same answer text.")]
+    assert len(drop_boilerplate_answers(rows)) == 2

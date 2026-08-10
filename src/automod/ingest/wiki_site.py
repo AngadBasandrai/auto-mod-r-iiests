@@ -83,6 +83,7 @@ class _ArticleParser(HTMLParser):
         self._heading_anchor = ""
         self._buffer: list[str] = []
         self._current: Section | None = None
+        self._skipping_lede = False
 
     # -- helpers ------------------------------------------------------------
     def _flush_block(self) -> None:
@@ -127,6 +128,16 @@ class _ArticleParser(HTMLParser):
             self._heading_tag = tag
             self._heading_anchor = attributes.get("id") or ""
             return
+        # <p class="lede"> is the page's one-line subtitle — "A practical index
+        # for hostel life, room types, food, cleanliness, rules, eligibility and
+        # photos". It reads like prose, so the extraction model happily turns it
+        # into half a dozen confident-sounding answers that answer nothing. It
+        # describes the page; it is never itself a fact.
+        if tag == "p" and "lede" in (attributes.get("class") or ""):
+            self._flush_block()
+            self._skip_depth += 1
+            self._skipping_lede = True
+            return
         # The anchor inside a heading is a permalink widget, not content.
         if tag == "a" and self._heading_tag and "heading-link" in (attributes.get("class") or ""):
             return
@@ -143,6 +154,11 @@ class _ArticleParser(HTMLParser):
             return
         if tag in _SKIP_TAGS:
             self._skip_depth = max(0, self._skip_depth - 1)
+            return
+        if tag == "p" and self._skipping_lede:
+            self._skipping_lede = False
+            self._skip_depth = max(0, self._skip_depth - 1)
+            self._buffer.clear()
             return
         if self._skip_depth:
             return

@@ -1,5 +1,5 @@
 {
   "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-  "records": 924,
+  "records": 865,
   "dim": 384
 }

@@ -179,6 +179,40 @@ PSEUDONYM = re.compile(r"\bUser\s?\d+", re.I)
 BLOCKLIST_PATH = config.CORPUS_DIR / "blocklist.txt"
 
 
+def drop_boilerplate_answers(rows: list[dict], min_repeats: int = 3) -> list[dict]:
+    """Remove answers reused across many unrelated questions.
+
+    When one string answers three or more different questions it is not a fact,
+    it is a description of where facts were supposed to go — a page subtitle, a
+    section index, an editor's checklist. The extraction model produces these
+    confidently, and they are worse than silence because they look like answers.
+
+    Caught in practice: five separate hostel questions on the student wiki all
+    answered "A practical index for hostel life, room types, food, cleanliness,
+    rules, eligibility, and photos", every one of them at confidence 0.9 from a
+    source trusted to answer on its own.
+    """
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = " ".join(row.get("answer", "").lower().split())
+        counts[key] = counts.get(key, 0) + 1
+
+    kept = [
+        r for r in rows
+        if counts.get(" ".join(r.get("answer", "").lower().split()), 0) < min_repeats
+    ]
+    if len(kept) != len(rows):
+        repeated = sorted(
+            ((n, a) for a, n in counts.items() if n >= min_repeats), reverse=True
+        )
+        log.info(
+            "Dropped %d rows sharing %d boilerplate answers", len(rows) - len(kept), len(repeated)
+        )
+        for count, answer in repeated[:5]:
+            log.info("  %dx %r", count, answer[:90])
+    return kept
+
+
 def drop_personal_rows(rows: list[dict]) -> list[dict]:
     """Remove rows that are about a chat participant rather than the college."""
     kept = [
@@ -274,6 +308,7 @@ def build(
     log.info("Confidence filter (>=%.2f): %d -> %d rows", min_confidence, before, len(rows))
 
     rows = drop_personal_rows(rows)
+    rows = drop_boilerplate_answers(rows)
     rows = apply_blocklist(rows, load_blocklist())
     rows = dedupe(rows)
 

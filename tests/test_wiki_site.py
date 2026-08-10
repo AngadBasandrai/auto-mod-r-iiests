@@ -133,3 +133,11 @@ def test_discover_urls_filters_skipped_paths(monkeypatch):
     assert "https://iiest-town.github.io/search/" not in urls
     assert "https://iiest-town.github.io/hostels/" in urls
     assert "https://iiest-town.github.io/departments/civil/" in urls
+
+
+def test_page_lede_is_not_treated_as_content():
+    # The lede is a subtitle describing the page. Fed to the extraction model it
+    # becomes several confident answers that answer nothing.
+    _, sections = wiki_site.parse_article(PAGE)
+    blob = "\n".join(s.body for s in sections)
+    assert "A practical index for hostel life" not in blob
