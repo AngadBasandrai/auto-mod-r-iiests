@@ -3,7 +3,7 @@
 // question was asked in.
 
 import { describe, expect, it } from 'vitest';
-import { detect, replyStyle } from './lang.js';
+import { detect, looksSubstituted, replyStyle } from './lang.js';
 
 describe('detect', () => {
   it('treats plain English as English', () => {
@@ -44,5 +44,43 @@ describe('detect', () => {
     for (const text of ['What is the fee?', 'fees kitni hai bhai', 'शुल्क कितना है?']) {
       expect(replyStyle(detect(text)).length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('looksSubstituted', () => {
+  it('detects a substituted question', () => {
+    const original = 'give a summary of faqs asked regarding iiest';
+    expect(
+      looksSubstituted(
+        original,
+        'What is the average package offered to CSE students in IIEST?',
+        detect(original)
+      )
+    ).toBe(true);
+  });
+
+  it('accepts a faithful restatement', () => {
+    const original = 'hostel fees kitni hai';
+    expect(looksSubstituted(original, 'What are the hostel fees?', detect(original))).toBe(false);
+  });
+
+  it('accepts a light rewording', () => {
+    const original = 'how are placements for mechanical';
+    expect(
+      looksSubstituted(
+        original,
+        'What are the placements like for mechanical engineering students?',
+        detect(original)
+      )
+    ).toBe(false);
+  });
+
+  it('never flags a Devanagari translation', () => {
+    const original = 'छात्रावास का शुल्क कितना है?';
+    expect(looksSubstituted(original, 'What is the hostel fee?', detect(original))).toBe(false);
+  });
+
+  it('is safe on empty input', () => {
+    expect(looksSubstituted('', 'What is the hostel fee?', detect(''))).toBe(false);
   });
 });

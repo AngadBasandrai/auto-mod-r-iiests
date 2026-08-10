@@ -107,13 +107,62 @@ Return ONLY a JSON object:
 
 Rules:
 - "english_query" must preserve the exact intent. Do not answer it, do not add facts.
+- "english_query" is a RESTATEMENT of the text you were given. Never replace it
+  with a different question, however plausible. If the text is vague, restate it
+  vaguely. Inventing a specific question the user did not ask is the worst
+  failure here, because everything downstream then answers the wrong thing
+  confidently.
 - "keywords" are used for keyword search against an FAQ written by students, so
   they must include BOTH the English term and the romanized Hindi term when they
   differ, plus likely misspellings and alternate transliterations a student would
   type. Example: for "hostel fees kitni hai" ->
   ["hostel fee", "hostal fees", "hostel charges", "chhatravas", "mess fees", "accommodation cost"].
-- Set "is_question" to false if the text is a rant, announcement, meme, or greeting
-  rather than something answerable.`;
+- Set "is_question" to false if the text is a rant, announcement, meme, greeting,
+  or a broad request to summarize rather than one answerable question.`;
+
+// Words carrying no topic signal, so their presence or absence says nothing
+// about whether two phrasings are the same question.
+const STOPWORDS = new Set(
+  `the a an of for in on at to is are was were be been being do does did done
+   what which who whom whose when where why how can could should would will
+   and or but if then than that this these those it its as by with from about
+   any some all my your our their there here get got give given tell me please
+   know need want much many more most good best`
+    .split(/\s+/)
+    .filter(Boolean)
+);
+
+function contentWords(text: string): Set<string> {
+  return new Set(
+    (text.toLowerCase().match(/[a-z]+/g) ?? []).filter(
+      (w) => w.length > 2 && !STOPWORDS.has(w)
+    )
+  );
+}
+
+/**
+ * Did the model answer a different question than the one it was given?
+ *
+ * Observed in practice: "give a summary of faqs asked regarding iiest" came back
+ * as "What is the average package offered to CSE students in IIEST?", and
+ * retrieval then scored 1.00 against a question nobody asked.
+ *
+ * Latin-script input only. Translating Devanagari legitimately shares no words
+ * with its source, and that is correct rather than suspicious.
+ */
+export function looksSubstituted(
+  original: string,
+  english: string,
+  detection: Detection
+): boolean {
+  if (detection.script !== 'latin') return false;
+  const source = contentWords(original);
+  const restated = contentWords(english);
+  if (source.size === 0 || restated.size === 0) return false;
+  let shared = 0;
+  for (const word of source) if (restated.has(word)) shared++;
+  return shared / source.size < 0.25;
+}
 
 export interface NormalizedQuery {
   original: string;
@@ -143,10 +192,22 @@ export async function normalizeQuery(text: string): Promise<NormalizedQuery> {
     { kind: 'fast', maxTokens: 512 }
   );
 
-  const english = String(data.english_query ?? '').trim() || original;
-  const keywords = (data.keywords ?? [])
+  let english = String(data.english_query ?? '').trim() || original;
+  let keywords = (data.keywords ?? [])
     .map((k) => String(k).trim())
     .filter((k) => k.length > 0);
+
+  if (looksSubstituted(original, english, detection)) {
+    // The whole response is suspect once the question has been swapped — the
+    // keywords describe the invented question too. Fall back to the raw text,
+    // which BM25 handles on its own.
+    console.warn(
+      `Normalizer substituted a different question; ignoring it. ` +
+        `"${original.slice(0, 80)}" -> "${english.slice(0, 80)}"`
+    );
+    english = original;
+    keywords = [];
+  }
 
   return {
     original,

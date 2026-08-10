@@ -11,10 +11,13 @@ Two layers:
 from __future__ import annotations
 
 import functools
+import logging
 import re
 from dataclasses import dataclass, field
 
 from . import groq_client
+
+log = logging.getLogger(__name__)
 
 DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 LATIN = re.compile(r"[A-Za-z]")
@@ -107,11 +110,17 @@ Return ONLY a JSON object:
 
 Rules:
 - "english_query" must preserve the exact intent. Do not answer it, do not add facts.
+- "english_query" is a RESTATEMENT of the text you were given. Never replace it
+  with a different question, however plausible. If the text is vague, restate it
+  vaguely — "give a summary of faqs about iiest" becomes "What are the frequently
+  asked questions about IIEST?", never "What is the average package for CSE?".
+  Inventing a specific question the user did not ask is the worst failure here,
+  because everything downstream then answers the wrong thing confidently.
 - "keywords" must include BOTH the English term and the romanized Hindi term when
   they differ, plus likely misspellings a student would type. Example: for
   "hostel fees kitni hai" -> ["hostel fee", "hostal fees", "hostel charges", "chhatravas", "mess fees"].
-- Set "is_question" to false if the text is a rant, announcement, meme, or greeting
-  rather than something answerable."""
+- Set "is_question" to false if the text is a rant, announcement, meme, greeting,
+  or a broad request to summarize rather than one answerable question."""
 
 
 @dataclass
@@ -122,6 +131,43 @@ class NormalizedQuery:
     topic: str
     is_question: bool
     detection: Detection
+
+
+# Words carrying no topic signal, so their presence or absence says nothing about
+# whether two phrasings are the same question.
+_STOPWORDS = frozenset(
+    """
+    the a an of for in on at to is are was were be been being do does did done
+    what which who whom whose when where why how can could should would will
+    and or but if then than that this these those it its as by with from about
+    any some all my your our their there here get got give given tell me please
+    know need want much many more most good best
+    """.split()
+)
+
+
+def _content_words(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 2 and w not in _STOPWORDS}
+
+
+def _looks_substituted(original: str, english: str, detection: Detection) -> bool:
+    """Did the model answer a different question than the one it was given?
+
+    Observed in practice: "give a summary of faqs asked regarding iiest" came
+    back as "What is the average package offered to CSE students in IIEST?".
+    Retrieval then scored 1.00 against a question nobody asked.
+
+    Only applied to Latin-script input. Translating Devanagari legitimately
+    shares no words with the source — "छात्रावास का शुल्क कितना है?" and "What is
+    the hostel fee?" have zero overlap and that is correct.
+    """
+    if detection.script != "latin":
+        return False
+    source = _content_words(original)
+    restated = _content_words(english)
+    if not source or not restated:
+        return False
+    return len(source & restated) / len(source) < 0.25
 
 
 @functools.lru_cache(maxsize=512)
@@ -149,6 +195,18 @@ def normalize_query(text: str) -> NormalizedQuery:
         english, keywords, topic, is_question = _normalize_cached(text.strip())
     except Exception:  # noqa: BLE001 - retrieval must still work without normalization
         english, keywords, topic, is_question = text.strip(), (), "general", True
+
+    if _looks_substituted(text, english, detection):
+        # The whole response is suspect once the question has been swapped —
+        # the keywords describe the invented question too. Fall back to the raw
+        # text, which BM25 and the embedder both handle on their own.
+        log.warning(
+            "Normalizer substituted a different question; ignoring it. %r -> %r",
+            text.strip()[:80],
+            english[:80],
+        )
+        english, keywords = text.strip(), ()
+
     return NormalizedQuery(
         original=text,
         english=english,
