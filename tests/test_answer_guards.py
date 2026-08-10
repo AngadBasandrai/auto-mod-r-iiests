@@ -49,3 +49,30 @@ def test_hinglish_answer_to_a_hinglish_question_is_not_an_echo():
     question = "hostel fees kitni hai"
     answer = "Hostel fees per semester lagbhag Rs 27,000 hai, including mess."
     assert not is_echo(answer, question)
+
+
+# --- posts with no subject matter --------------------------------------------
+from automod.answer import has_topic  # noqa: E402
+
+
+def test_rejects_a_bare_plea_for_help():
+    # Real post: title "URGENT!!!", body "Can anyone help please". It retrieved
+    # every corpus row mentioning help and was answered with reassurance.
+    assert not has_topic("URGENT!!!\n\nCan anyone help please")
+    assert not has_topic("guys plz help urgent")
+    assert not has_topic("Need advice, any suggestions? Thanks in advance")
+
+
+def test_accepts_a_plea_that_names_its_subject():
+    assert has_topic("URGENT!!! can anyone help with hostel allotment please")
+    assert has_topic("guys plz help, what is the mess fee")
+
+
+def test_accepts_ordinary_short_questions():
+    for question in (
+        "Is ragging bad?",
+        "hostel fees kitni hai",
+        "How many sharing room in 1st year ??",
+        "Is attendance strict",
+    ):
+        assert has_topic(question), question

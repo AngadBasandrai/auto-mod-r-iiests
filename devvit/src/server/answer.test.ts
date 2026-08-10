@@ -2,7 +2,7 @@
 // are real: they come from replaying r/iiests posts, and both would have posted.
 
 import { describe, expect, it } from 'vitest';
-import { isEcho } from './answer.js';
+import { hasTopic, isEcho } from './answer.js';
 
 describe('isEcho', () => {
   it("rejects the poster's own words", () => {
@@ -47,5 +47,27 @@ describe('isEcho', () => {
         'hostel fees kitni hai'
       )
     ).toBe(false);
+  });
+});
+
+describe('hasTopic', () => {
+  it('rejects a bare plea for help', () => {
+    // Real post: title "URGENT!!!", body "Can anyone help please".
+    expect(hasTopic('URGENT!!!\n\nCan anyone help please')).toBe(false);
+    expect(hasTopic('guys plz help urgent')).toBe(false);
+    expect(hasTopic('Need advice, any suggestions? Thanks in advance')).toBe(false);
+  });
+
+  it('accepts a plea that names its subject', () => {
+    expect(hasTopic('URGENT!!! can anyone help with hostel allotment please')).toBe(true);
+    expect(
+      hasTopic('Hello can seniors pls tell which electronics core companies to iiest shibpur')
+    ).toBe(true);
+  });
+
+  it('accepts ordinary short questions', () => {
+    for (const q of ['Is ragging bad?', 'hostel fees kitni hai', 'Is attendance strict']) {
+      expect(hasTopic(q), q).toBe(true);
+    }
   });
 });

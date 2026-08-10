@@ -86,6 +86,34 @@ def _format_context(hits: list[Hit]) -> str:
     return "\n\n".join(blocks)
 
 
+# Words that signal someone wants help without saying what about. A post made
+# only of these has no subject matter to retrieve against.
+_PLEA_WORDS = frozenset(
+    """
+    help helps helping anyone anybody someone somebody urgent urgently asap
+    plz pls please kindly guys bhai bhaiya yaar sir mam maam
+    need needed want reply replies answer answers respond response
+    question questions doubt doubts query queries ask asking
+    advice suggestion suggestions suggest opinion opinions thoughts
+    thanks thank thankyou tia advance beforehand appreciated regards
+    hello hii hey greetings everyone folks bros dude
+    senior seniors junior juniors edit update
+    """.split()
+)
+
+
+def has_topic(question: str) -> bool:
+    """Does the question say what it is about?
+
+    "URGENT!!!" with a body of "Can anyone help please" is grammatically a
+    question and retrieves beautifully — every corpus row mentioning help scores
+    high — so the bot answered it with generic reassurance about the office and
+    alumni. There was nothing to answer. Strip the pleading and if no subject
+    remains, there is no question.
+    """
+    return bool(lang.content_words(question) - _PLEA_WORDS)
+
+
 def is_echo(text: str, question: str, threshold: float = 0.8) -> bool:
     """Is this "answer" just the poster's own words handed back?
 
@@ -134,6 +162,9 @@ def generate(
 
     if not normalized.is_question:
         return Answer("", [], False, 0.0, 0, reason="not a question")
+
+    if not has_topic(question):
+        return Answer("", [], False, 0.0, 0, reason="no topic in the question")
 
     hits = hits if hits is not None else search(question, index, normalized=normalized)
     top_score, supporting = confidence(hits)

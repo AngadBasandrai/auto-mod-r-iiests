@@ -84,6 +84,37 @@ function formatContext(hits: Hit[]): string {
     .join('\n\n');
 }
 
+// Words that signal someone wants help without saying what about. A post made
+// only of these has no subject matter to retrieve against.
+const PLEA_WORDS = new Set(
+  `help helps helping anyone anybody someone somebody urgent urgently asap
+   plz pls please kindly guys bhai bhaiya yaar sir mam maam
+   need needed want reply replies answer answers respond response
+   question questions doubt doubts query queries ask asking
+   advice suggestion suggestions suggest opinion opinions thoughts
+   thanks thank thankyou tia advance beforehand appreciated regards
+   hello hii hey greetings everyone folks bros dude
+   senior seniors junior juniors edit update`
+    .split(/\s+/)
+    .filter(Boolean)
+);
+
+/**
+ * Does the question say what it is about?
+ *
+ * "URGENT!!!" with a body of "Can anyone help please" is grammatically a
+ * question and retrieves beautifully — every corpus row mentioning help scores
+ * high — so the bot answered it with generic reassurance about the office and
+ * alumni. There was nothing to answer. Strip the pleading and if no subject
+ * remains, there is no question.
+ */
+export function hasTopic(question: string): boolean {
+  for (const word of contentWords(question)) {
+    if (!PLEA_WORDS.has(word)) return true;
+  }
+  return false;
+}
+
 /**
  * Is this "answer" just the poster's own words handed back?
  *
@@ -131,6 +162,8 @@ export async function generate(
   const normalized = precomputed ?? (await normalizeQuery(question));
 
   if (!normalized.isQuestion) return empty('not a question');
+
+  if (!hasTopic(question)) return empty('no topic in the question');
 
   const hits = await search(question, normalized);
   if (hits.length === 0) return empty('no retrieval hits');

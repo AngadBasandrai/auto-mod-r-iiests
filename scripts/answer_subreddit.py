@@ -248,12 +248,32 @@ def main() -> int:
     outcomes: dict[str, int] = {}
     answered = 0
 
+    stopped_early = ""
+
     for number, post in enumerate(posts, 1):
         if not post.question:
             continue
 
-        normalized = lang.normalize_query(post.question)
-        result = answer_mod.generate(post.question, index, normalized=normalized)
+        try:
+            normalized = lang.normalize_query(post.question)
+            result = answer_mod.generate(post.question, index, normalized=normalized)
+        except Exception as exc:  # noqa: BLE001 - a dead API must not lose the run
+            message = str(exc)
+            # The free tier allows 500,000 tokens per day per model. A long
+            # replay can exhaust it, and when it does every remaining post will
+            # fail the same way, so stop and print what we have rather than
+            # grinding through 70 identical tracebacks.
+            if "tokens per day" in message or "TPD" in message:
+                stopped_early = (
+                    f"Groq's daily token limit is exhausted; stopped at post {number}. "
+                    "It resets 24h after the first call of the day. Everything below is "
+                    "real, just partial."
+                )
+            else:
+                stopped_early = f"Stopped at post {number}: {message[:200]}"
+            log.error("%s", stopped_early)
+            break
+
         top, supporting = confidence(result.hits)
 
         reason = result.reason if not result.should_post else "answered"
@@ -289,9 +309,16 @@ def main() -> int:
             for line in answer_mod.render_comment(result).splitlines():
                 emit(f"  | {line}")
 
+    processed = sum(outcomes.values())
     emit()
     emit("=" * 78)
-    emit(f"{answered} of {len(posts)} posts would get a reply ({100 * answered / len(posts):.0f}%)")
+    if stopped_early:
+        emit(stopped_early)
+        emit("")
+    emit(
+        f"{answered} of {processed} posts processed would get a reply "
+        f"({100 * answered / max(1, processed):.0f}%)"
+    )
     for reason, count in sorted(outcomes.items(), key=lambda kv: -kv[1]):
         emit(f"  {count:3}  {reason}")
     emit()
