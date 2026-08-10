@@ -39,8 +39,14 @@ Scoring guide:
 - 0.4  same topic, does not actually answer what was asked
 - 0.0  unrelated, or only superficially shares words
 
-Be strict. A wrong answer posted publicly is worse than no answer. Score every
-candidate. Do not invent candidates."""
+Sharing a proper noun is not relevance. "Is IIEST a NIT?" scores 0.0 against
+"What is IIEST-Chan?" — both say IIEST and that is the only thing they have in
+common. Ask yourself whether somebody reading this candidate would have their
+actual question answered. If not, it is 0.0, however familiar the words look.
+
+Be strict, and use the whole range — if you are giving everything 0.7 you are
+not discriminating. A wrong answer posted publicly is worse than no answer.
+Score every candidate. Do not invent candidates."""
 
 
 def _rrf_fuse(

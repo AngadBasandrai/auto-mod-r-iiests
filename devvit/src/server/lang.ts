@@ -117,8 +117,16 @@ Rules:
   differ, plus likely misspellings and alternate transliterations a student would
   type. Example: for "hostel fees kitni hai" ->
   ["hostel fee", "hostal fees", "hostel charges", "chhatravas", "mess fees", "accommodation cost"].
-- Set "is_question" to false if the text is a rant, announcement, meme, greeting,
-  or a broad request to summarize rather than one answerable question.`;
+- Set "is_question" to false unless the author is genuinely ASKING something.
+  Set it to false for a rant, announcement, meme, greeting, poll, or a broad
+  request to summarize. Most importantly, set it to false when the author is
+  SHARING or SHOWING something they made or found:
+    "Introducing, IIEST-Chan"      -> sharing artwork. false.
+    "Campus map" + "made this, open for suggestions" -> sharing work. false.
+    "Got into IIEST finally!!"     -> celebrating. false.
+    "Rate my schedule"             -> asking for opinions, not facts. false.
+  A post can invite comments ("open for suggestions", "thoughts?") without
+  asking a factual question. Inviting discussion is not asking a question.`;
 
 // Words carrying no topic signal, so their presence or absence says nothing
 // about whether two phrasings are the same question.
@@ -132,7 +140,7 @@ const STOPWORDS = new Set(
     .filter(Boolean)
 );
 
-function contentWords(text: string): Set<string> {
+export function contentWords(text: string): Set<string> {
   return new Set(
     (text.toLowerCase().match(/[a-z]+/g) ?? []).filter(
       (w) => w.length > 2 && !STOPWORDS.has(w)

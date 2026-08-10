@@ -119,8 +119,18 @@ Rules:
 - "keywords" must include BOTH the English term and the romanized Hindi term when
   they differ, plus likely misspellings a student would type. Example: for
   "hostel fees kitni hai" -> ["hostel fee", "hostal fees", "hostel charges", "chhatravas", "mess fees"].
-- Set "is_question" to false if the text is a rant, announcement, meme, greeting,
-  or a broad request to summarize rather than one answerable question."""
+- Set "is_question" to false unless the author is genuinely ASKING something.
+  Set it to false for a rant, announcement, meme, greeting, poll, or a broad
+  request to summarize. Most importantly, set it to false when the author is
+  SHARING or SHOWING something they made or found:
+    "Introducing, IIEST-Chan"      -> sharing artwork. false.
+    "Campus map" + "made this, open for suggestions" -> sharing work. false.
+    "Got into IIEST finally!!"     -> celebrating. false.
+    "Rate my schedule"             -> asking for opinions, not facts. false.
+  A post can invite comments ("open for suggestions", "thoughts?") without
+  asking a factual question. Inviting discussion is not asking a question.
+  When the post is someone presenting their own work, the only honest reply is
+  none, so is_question must be false."""
 
 
 @dataclass
@@ -146,7 +156,7 @@ _STOPWORDS = frozenset(
 )
 
 
-def _content_words(text: str) -> set[str]:
+def content_words(text: str) -> set[str]:
     return {w for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 2 and w not in _STOPWORDS}
 
 
@@ -171,8 +181,8 @@ def _looks_substituted(original: str, english: str, detection: Detection) -> boo
     """
     if detection.script != "latin":
         return False
-    source = _content_words(original)
-    restated = _content_words(english)
+    source = content_words(original)
+    restated = content_words(english)
     if not source or not restated:
         return False
     return len(restated & source) / len(restated) < 0.25
