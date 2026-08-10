@@ -147,6 +147,12 @@ function contentWords(text: string): Set<string> {
  * as "What is the average package offered to CSE students in IIEST?", and
  * retrieval then scored 1.00 against a question nobody asked.
  *
+ * Measured over the RESTATEMENT's words, not the original's. A Reddit post is a
+ * title plus several paragraphs; a restated question is one sentence, so it can
+ * never contain much of a long post, and scoring it that way threw away
+ * perfectly good restatements. The right question is the other one: does the
+ * restatement bring its own nouns, or reuse the ones it was given.
+ *
  * Latin-script input only. Translating Devanagari legitimately shares no words
  * with its source, and that is correct rather than suspicious.
  */
@@ -160,8 +166,8 @@ export function looksSubstituted(
   const restated = contentWords(english);
   if (source.size === 0 || restated.size === 0) return false;
   let shared = 0;
-  for (const word of source) if (restated.has(word)) shared++;
-  return shared / source.size < 0.25;
+  for (const word of restated) if (source.has(word)) shared++;
+  return shared / restated.size < 0.25;
 }
 
 export interface NormalizedQuery {

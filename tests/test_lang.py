@@ -88,3 +88,30 @@ def test_devanagari_translation_is_never_flagged():
 
 def test_empty_input_is_not_flagged():
     assert not _looks_substituted("", "What is the hostel fee?", detect(""))
+
+
+def test_a_long_post_restated_as_one_sentence_is_not_flagged():
+    # Regression: scoring overlap against the ORIGINAL meant a multi-paragraph
+    # post could never share a quarter of its words with a one-line question,
+    # so good restatements were thrown away. Real post from r/iiests.
+    original = (
+        "Hey someone plz tell kya character certificate required hai ya nhi , "
+        "im getting confused because the josaa brochure says one thing and the "
+        "institute website says another, and I have to submit my documents "
+        "tomorrow morning at the counselling centre so I need to know today"
+    )
+    assert not _looks_substituted(
+        original, "Is a character certificate required for admission?", detect(original)
+    )
+
+
+def test_still_catches_a_substitution_inside_a_long_post():
+    original = (
+        "Hey everyone, I have been lurking here for a while and wanted to ask, "
+        "give a summary of the faqs asked regarding iiest please, anything helps"
+    )
+    assert _looks_substituted(
+        original,
+        "What is the average package offered to CSE students in IIEST?",
+        detect(original),
+    )

@@ -83,4 +83,30 @@ describe('looksSubstituted', () => {
   it('is safe on empty input', () => {
     expect(looksSubstituted('', 'What is the hostel fee?', detect(''))).toBe(false);
   });
+
+  it('does not flag a long post restated as one sentence', () => {
+    // Regression: scoring overlap against the ORIGINAL meant a multi-paragraph
+    // post could never share a quarter of its words with a one-line question.
+    const original =
+      'Hey someone plz tell kya character certificate required hai ya nhi , ' +
+      'im getting confused because the josaa brochure says one thing and the ' +
+      'institute website says another, and I have to submit my documents ' +
+      'tomorrow morning at the counselling centre so I need to know today';
+    expect(
+      looksSubstituted(original, 'Is a character certificate required for admission?', detect(original))
+    ).toBe(false);
+  });
+
+  it('still catches a substitution inside a long post', () => {
+    const original =
+      'Hey everyone, I have been lurking here for a while and wanted to ask, ' +
+      'give a summary of the faqs asked regarding iiest please, anything helps';
+    expect(
+      looksSubstituted(
+        original,
+        'What is the average package offered to CSE students in IIEST?',
+        detect(original)
+      )
+    ).toBe(true);
+  });
 });

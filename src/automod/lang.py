@@ -157,6 +157,14 @@ def _looks_substituted(original: str, english: str, detection: Detection) -> boo
     back as "What is the average package offered to CSE students in IIEST?".
     Retrieval then scored 1.00 against a question nobody asked.
 
+    Measured over the RESTATEMENT's words, not the original's. A Reddit post is
+    a title plus several paragraphs; a restated question is one sentence, so it
+    can never contain much of a long post and scoring it that way flagged
+    perfectly good restatements — "Hey someone plz tell kya character certificate
+    required hai ya nhi ..." became "Is a character certificate required for
+    admission?" and was thrown away. The right question is the other one: does
+    the restatement bring its own nouns, or reuse the ones it was given.
+
     Only applied to Latin-script input. Translating Devanagari legitimately
     shares no words with the source — "छात्रावास का शुल्क कितना है?" and "What is
     the hostel fee?" have zero overlap and that is correct.
@@ -167,7 +175,7 @@ def _looks_substituted(original: str, english: str, detection: Detection) -> boo
     restated = _content_words(english)
     if not source or not restated:
         return False
-    return len(source & restated) / len(source) < 0.25
+    return len(restated & source) / len(restated) < 0.25
 
 
 @functools.lru_cache(maxsize=512)
