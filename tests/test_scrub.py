@@ -52,3 +52,55 @@ def test_find_leaks_flags_and_clears():
     dirty = "reach me at a@b.com or 9144246933"
     assert find_leaks(dirty)
     assert not find_leaks(scrub_text(dirty))
+
+
+# --- corpus-level structural filters ----------------------------------------
+import tempfile  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from automod.curate.build_corpus import apply_blocklist, drop_personal_rows, load_blocklist  # noqa: E402
+
+
+def _row(question: str, answer: str = "some answer text here") -> dict:
+    return {"question": question, "answer": answer, "confidence": 0.8}
+
+
+def test_drops_rows_about_a_person():
+    rows = [
+        _row("What is the JEE ADV score of User1?", "User1 scored around 80."),
+        _row("What is the hostel fee?", "The hostel fee is Rs 12,000."),
+        _row("How much RAM does User 4 have?", "16GB."),
+    ]
+    kept = drop_personal_rows(rows)
+    assert len(kept) == 1
+    assert kept[0]["question"] == "What is the hostel fee?"
+
+
+def test_keeps_rows_that_merely_contain_the_word_user():
+    # "user" without a number is ordinary English and must survive.
+    rows = [_row("Is the wifi good?", "Every user gets a login for the campus wifi.")]
+    assert drop_personal_rows(rows) == rows
+
+
+def test_blocklist_is_case_insensitive_and_spans_question_and_answer():
+    rows = [
+        _row("How much is the hostel fee?", "The hostel fee is approximately Rs 485."),
+        _row("How much is the hostel fee?", "The hostel fee is approximately Rs 12,000."),
+    ]
+    patterns = [__import__("re").compile(r"rs 485", __import__("re").I)]
+    kept = apply_blocklist(rows, patterns)
+    assert len(kept) == 1
+    assert "12,000" in kept[0]["answer"]
+
+
+def test_no_blocklist_file_is_not_an_error():
+    assert load_blocklist(Path("does") / "not" / "exist.txt") == []
+
+
+def test_malformed_pattern_is_skipped_not_fatal():
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "blocklist.txt"
+        path.write_text(
+            "# a comment\n\nvalid pattern\n[unclosed\n", encoding="utf-8"
+        )
+        assert len(load_blocklist(path)) == 1

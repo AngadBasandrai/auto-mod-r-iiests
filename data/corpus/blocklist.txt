@@ -1,0 +1,25 @@
+# Rows to drop from the corpus, applied by build_corpus.py after the merge.
+#
+# WHY THIS FILE EXISTS
+# qa.jsonl is regenerated from whatsapp.jsonl and wiki.jsonl on every
+# build_corpus.py run, so deleting a bad row by hand does not survive. Recording
+# it here does, and it doubles as a log of what the extraction got wrong.
+#
+# FORMAT
+# One pattern per line, matched case-insensitively as a regular expression
+# against "<question> <answer>". Blank lines and #-comments are ignored.
+# Prefer a distinctive phrase over a clever regex — you will reread this later.
+#
+# Check what a pattern catches before committing to it:
+#   python scripts/build_corpus.py --check-blocklist
+
+# --- Wrong numbers -----------------------------------------------------------
+# The chat gives six different hostel fees. These are the ones that are not
+# plausible under any reading; the survivors still disagree and are left in so
+# the answer model hedges between them rather than picking one confidently.
+hostel fee is approximately Rs 485
+hostel and mess fees per semester is around Rs 1\.5 lakhs
+
+# --- About a different college ----------------------------------------------
+# r/iiests readers are not asking about BIT Mesra's fees.
+BIT MESRA

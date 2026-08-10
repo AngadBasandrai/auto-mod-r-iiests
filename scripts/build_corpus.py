@@ -52,9 +52,50 @@ def audit() -> int:
     return 0
 
 
+def check_blocklist() -> int:
+    """Dry-run the blocklist against the current corpus.
+
+    Worth doing before every commit to blocklist.txt: a pattern meant for one
+    bad fee row can quietly take out a dozen good ones, and you would only find
+    out when the bot went quiet on a whole topic.
+    """
+    patterns = build_corpus.load_blocklist()
+    if not patterns:
+        print(f"No patterns in {build_corpus.BLOCKLIST_PATH}")
+        return 0
+
+    rows = build_corpus.load_corpus()
+    print(f"{len(patterns)} patterns against {len(rows)} rows in the built corpus\n")
+
+    total = 0
+    for pattern in patterns:
+        matched = [
+            r for r in rows
+            if pattern.search(f"{r.get('question', '')} {r.get('answer', '')}")
+        ]
+        total += len(matched)
+        marker = "  " if len(matched) == 1 else "! " if len(matched) > 1 else "? "
+        print(f"{marker}{pattern.pattern}  -> {len(matched)} row(s)")
+        for row in matched[:5]:
+            print(f"      {row.get('question', '')[:70]}")
+            print(f"        {row.get('answer', '')[:80]}")
+        if len(matched) > 5:
+            print(f"      ... and {len(matched) - 5} more")
+
+    print(f"\n{total} of {len(rows)} rows would be dropped.")
+    print("'!' means a pattern matched more than one row — check that is intended.")
+    print("'?' means it matched nothing; the row may already be gone, or the pattern is wrong.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Audit the existing corpus instead of rebuilding.")
+    parser.add_argument(
+        "--check-blocklist",
+        action="store_true",
+        help="Show which corpus rows data/corpus/blocklist.txt would drop.",
+    )
     args = parser.parse_args()
 
     config.setup_logging()
@@ -62,6 +103,8 @@ def main() -> int:
 
     if args.check:
         return audit()
+    if args.check_blocklist:
+        return check_blocklist()
 
     whatsapp_pairs = load_jsonl(config.WHATSAPP_RAW_PATH)
     log.info("Loaded %d WhatsApp pairs", len(whatsapp_pairs))

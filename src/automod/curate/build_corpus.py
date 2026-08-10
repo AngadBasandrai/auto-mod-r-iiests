@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 import numpy as np
@@ -166,6 +167,64 @@ def pairs_from_wiki(path: Path | None = None) -> list[dict]:
     )
 
 
+# sessionize replaces real names with User1/User2 before the model ever sees the
+# transcript, so a pseudonym in the output means the extractor wrote a fact ABOUT
+# a person rather than about the college — "What is the JEE ADV score of User1?".
+# Useless as an FAQ answer and, when it names a workplace or a rank, closer to
+# personal data than anything else in the corpus. Always on and not configurable:
+# the extraction prompt already forbids this and the model does it anyway, so the
+# guard belongs in code where it cannot regress.
+PSEUDONYM = re.compile(r"\bUser\s?\d+", re.I)
+
+BLOCKLIST_PATH = config.CORPUS_DIR / "blocklist.txt"
+
+
+def drop_personal_rows(rows: list[dict]) -> list[dict]:
+    """Remove rows that are about a chat participant rather than the college."""
+    kept = [
+        r for r in rows
+        if not PSEUDONYM.search(f"{r.get('question', '')} {r.get('answer', '')}")
+    ]
+    if len(kept) != len(rows):
+        log.info("Dropped %d rows that were about a person, not the college", len(rows) - len(kept))
+    return kept
+
+
+def load_blocklist(path: Path | None = None) -> list[re.Pattern[str]]:
+    """Curation patterns from data/corpus/blocklist.txt."""
+    path = path or BLOCKLIST_PATH
+    if not path.exists():
+        return []
+    patterns: list[re.Pattern[str]] = []
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        try:
+            patterns.append(re.compile(line, re.I))
+        except re.error as exc:
+            log.warning("%s:%d is not a valid regex (%s) — skipping", path.name, lineno, exc)
+    return patterns
+
+
+def apply_blocklist(rows: list[dict], patterns: list[re.Pattern[str]]) -> list[dict]:
+    """Drop rows a human has judged wrong. Runs before dedupe, so a blocked row
+    cannot survive by being the highest-confidence copy of a duplicate pair."""
+    if not patterns:
+        return rows
+    kept: list[dict] = []
+    dropped = 0
+    for row in rows:
+        blob = f"{row.get('question', '')} {row.get('answer', '')}"
+        if any(pattern.search(blob) for pattern in patterns):
+            dropped += 1
+            log.debug("Blocked: %s", row.get("question", "")[:80])
+            continue
+        kept.append(row)
+    log.info("Blocklist: dropped %d of %d rows (%d patterns)", dropped, len(rows), len(patterns))
+    return kept
+
+
 def dedupe(rows: list[dict], threshold: float | None = None) -> list[dict]:
     """Collapse near-identical questions, keeping the most trustworthy copy.
 
@@ -214,6 +273,8 @@ def build(
     rows = [r for r in rows if float(r.get("confidence", 0)) >= min_confidence]
     log.info("Confidence filter (>=%.2f): %d -> %d rows", min_confidence, before, len(rows))
 
+    rows = drop_personal_rows(rows)
+    rows = apply_blocklist(rows, load_blocklist())
     rows = dedupe(rows)
 
     # Belt and braces: nothing reaches a committed file unscrubbed.
