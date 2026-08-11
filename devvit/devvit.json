@@ -1,33 +1,28 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "iiests-faq-bot",
-
+  "name": "iiest-faq-bot",
   "server": {
     "dir": "dist/server",
     "entry": "index.js"
   },
-
   "scripts": {
     "build": "node build.mjs",
     "dev": "node build.mjs --watch"
   },
-
-
-
   "permissions": {
     "http": {
       "enable": true,
-      "domains": ["api.groq.com"]
+      "domains": [
+        "api.groq.com"
+      ]
     },
     "redis": true
   },
-
   "triggers": {
     "onPostSubmit": "/internal/triggers/post-submit",
     "onCommentCreate": "/internal/triggers/comment-create",
     "onMentionInCommentCreate": "/internal/triggers/mention"
   },
-
   "settings": {
     "global": {
       "groqApiKey": {
@@ -68,5 +63,8 @@
         "defaultValue": 120
       }
     }
+  },
+  "dev": {
+    "subreddit": "iiest_faq_bot_dev2"
   }
 }
