@@ -1,14 +1,13 @@
 name: bot
 
-# Free 24/7 operation without a server. GitHub's cron minimum is 5 minutes and
-# scheduled runs are delayed under load, so real-world latency is ~10-20 min.
+# The PRAW polling bot. Manual only: Reddit stopped issuing Data API keys, so
+# there are no REDDIT_* secrets and a scheduled run could only fail. The live
+# bot is the Devvit app in devvit/, which Reddit triggers directly.
 #
-# Scheduled workflows on public repos are auto-disabled after 60 days with no
-# repository activity. The seen.json commit at the end of each run counts as
-# activity, so this workflow keeps itself alive.
+# If credentials ever arrive, add the secrets and restore a schedule here
+# (e.g. cron "*/10 * * * *"); the seen.json commit below keeps it from being
+# auto-disabled for inactivity.
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
