@@ -7,7 +7,7 @@
 //   2. The reply comes back in the language and script the question used.
 
 import { ANSWER } from './config.js';
-import { chatJson } from './groq.js';
+import { chatJson } from './llm.js';
 import { contentWords, normalizeQuery, replyStyle, type NormalizedQuery } from './lang.js';
 import { confidence, isConfident, search, type Hit } from './retrieve.js';
 

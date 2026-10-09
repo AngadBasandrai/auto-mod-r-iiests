@@ -1,16 +1,27 @@
-// Thin wrapper over the Groq chat API, ported from src/automod/groq_client.py.
+// Thin wrapper over the Gemini chat API, ported from src/automod/groq_client.py.
 //
 // Same three jobs: retry with backoff on rate limits, parse JSON tolerantly
 // (models wrap JSON in prose or code fences even in JSON mode), and fall back
 // from the strong model to a second one.
 //
+// Gemini rather than Groq because Reddit's fetch policy allows only OpenAI and
+// Google Gemini as AI providers; a request for any other domain is denied. The
+// Python pipeline still builds the corpus with Groq, which runs locally and is
+// not subject to that policy.
+//
 // Devvit has no npm SDK available inside the sandbox, so this is plain fetch
-// against the REST endpoint. api.groq.com is allowlisted in devvit.json.
+// against Gemini's OpenAI-compatible REST endpoint, which keeps the request and
+// response shapes identical to the Groq client this was ported from.
+// generativelanguage.googleapis.com is requested in devvit.json.
 
 import { settings } from '@devvit/web/server';
 import { MODELS } from './config.js';
 
-const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+
+// Gemini 3 models always think, and thinking tokens are spent out of
+// max_tokens. Without headroom a 512-token JSON reply gets cut off mid-object.
+const THINKING_HEADROOM_TOKENS = 1024;
 const FENCE = /```(?:json)?\s*([\s\S]*?)\s*```/;
 
 export type ModelKind = 'fast' | 'strong';
@@ -19,10 +30,10 @@ let cachedKey: string | undefined;
 
 async function apiKey(): Promise<string> {
   if (cachedKey) return cachedKey;
-  const value = await settings.get<string>('groqApiKey');
+  const value = await settings.get<string>('geminiApiKey');
   if (!value) {
     throw new Error(
-      'groqApiKey is not configured. Set it in the app settings on developers.reddit.com.'
+      'geminiApiKey is not configured. Set it with: npx devvit settings set geminiApiKey'
     );
   }
   cachedKey = value;
@@ -52,7 +63,8 @@ async function callModel(
       { role: 'user', content: user },
     ],
     temperature: options.temperature ?? 0.2,
-    max_tokens: options.maxTokens ?? 1024,
+    max_tokens: (options.maxTokens ?? 1024) + THINKING_HEADROOM_TOKENS,
+    reasoning_effort: 'low',
   };
   if (options.jsonMode) body['response_format'] = { type: 'json_object' };
 
@@ -82,9 +94,9 @@ async function callModel(
 
       const detail = await response.text().catch(() => '');
       if (response.status !== 429 && response.status < 500) {
-        throw new Error(`Groq ${response.status}: ${detail.slice(0, 300)}`);
+        throw new Error(`Gemini ${response.status}: ${detail.slice(0, 300)}`);
       }
-      lastError = new Error(`Groq ${response.status}: ${detail.slice(0, 300)}`);
+      lastError = new Error(`Gemini ${response.status}: ${detail.slice(0, 300)}`);
     } catch (error) {
       lastError = error;
     }
@@ -109,11 +121,11 @@ export async function chat(
     try {
       return await callModel(model, system, user, options);
     } catch (error) {
-      console.warn(`Groq call failed on ${model}: ${String(error)}`);
+      console.warn(`Gemini call failed on ${model}: ${String(error)}`);
       lastError = error;
     }
   }
-  throw new Error(`All Groq models failed: ${String(lastError)}`);
+  throw new Error(`All Gemini models failed: ${String(lastError)}`);
 }
 
 /** Chat turn that must return a JSON object. Resolves to `fallbackValue` if it doesn't. */
@@ -132,7 +144,7 @@ export async function chatJson<T>(
       jsonMode: true,
     });
   } catch (error) {
-    console.warn(`Groq JSON call failed: ${String(error)}`);
+    console.warn(`Gemini JSON call failed: ${String(error)}`);
     return fallbackValue;
   }
 

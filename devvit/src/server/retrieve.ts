@@ -5,7 +5,7 @@
 // The Python pipeline is hybrid: BM25 plus dense vectors, fused with RRF. Dense
 // retrieval cannot come along here — it needs fastembed/ONNX to embed the query
 // at request time, and Devvit runs a JS sandbox with no native modules, while
-// Groq has no embeddings endpoint to offload it to.
+// there is no embeddings endpoint wired up to offload it to.
 //
 // So this is lexical only, and the loss is covered from two directions:
 //   * the normalizer is asked for more aggressive spelling and transliteration
@@ -20,7 +20,7 @@
 
 import { RETRIEVAL, ANSWER } from './config.js';
 import { bm25, records, type QaRecord } from './corpus.js';
-import { chatJson } from './groq.js';
+import { chatJson } from './llm.js';
 import type { NormalizedQuery } from './lang.js';
 
 export interface Hit {

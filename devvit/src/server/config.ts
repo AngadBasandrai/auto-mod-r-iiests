@@ -4,11 +4,11 @@
 
 export const MODELS = {
   /** Query normalization and reranking — cheap and fast. */
-  fast: 'llama-3.1-8b-instant',
+  fast: 'gemini-3.5-flash-lite',
   /** The user-facing answer. Handles Hindi/Hinglish generation noticeably better. */
-  strong: 'llama-3.3-70b-versatile',
+  strong: 'gemini-3.8-flash',
   /** Used when `strong` is rate limited. */
-  strongFallback: 'openai/gpt-oss-120b',
+  strongFallback: 'gemini-3.5-flash',
 } as const;
 
 export const RETRIEVAL = {

@@ -13,7 +13,7 @@
     "http": {
       "enable": true,
       "domains": [
-        "api.groq.com"
+        "generativelanguage.googleapis.com"
       ]
     },
     "redis": true
@@ -25,10 +25,10 @@
   },
   "settings": {
     "global": {
-      "groqApiKey": {
+      "geminiApiKey": {
         "type": "string",
-        "label": "Groq API key",
-        "helpText": "From https://console.groq.com/keys. Used for query normalization, reranking and answer generation.",
+        "label": "Gemini API key",
+        "helpText": "From https://aistudio.google.com/apikey. Used for query normalization, reranking and answer generation.",
         "isSecret": true
       }
     },

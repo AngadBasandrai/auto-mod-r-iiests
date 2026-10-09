@@ -2,7 +2,7 @@
 // these shapes has been seen in practice.
 
 import { describe, expect, it } from 'vitest';
-import { parseJson } from './groq.js';
+import { parseJson } from './llm.js';
 
 describe('parseJson', () => {
   it('parses plain JSON', () => {

@@ -22,11 +22,11 @@ subreddits it is installed on.
 ## What is sent to third parties
 
 To decide whether a post is a question and to write a reply, the app sends the
-**text of the post or comment** (title and body) to the Groq API
-(`api.groq.com`), together with matching entries from the app's own knowledge
+**text of the post or comment** (title and body) to the Google Gemini API
+(`generativelanguage.googleapis.com`), together with matching entries from the app's own knowledge
 base. Usernames are not included by the app, but anything a person writes in the
-text itself is sent as written. Groq processes this under its own terms and
-privacy policy: <https://groq.com/privacy-policy/>.
+text itself is sent as written. Google processes this under the Gemini API terms:
+<https://ai.google.dev/gemini-api/terms>.
 
 No data is sent to any other third party. Nothing is sold or used for
 advertising.

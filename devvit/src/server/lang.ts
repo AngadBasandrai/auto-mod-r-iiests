@@ -12,7 +12,7 @@
 // cost?"; this one is lexical only, so the alternate spellings the normalizer
 // produces are what carry transliteration across.
 
-import { chatJson } from './groq.js';
+import { chatJson } from './llm.js';
 
 const DEVANAGARI = /[ऀ-ॿ]/g;
 const LATIN = /[A-Za-z]/g;
@@ -194,7 +194,7 @@ interface NormalizeResponse {
   is_question?: boolean;
 }
 
-/** Canonicalize a user question. Falls back to the raw text if Groq fails. */
+/** Canonicalize a user question. Falls back to the raw text if the model call fails. */
 export async function normalizeQuery(text: string): Promise<NormalizedQuery> {
   const original = (text ?? '').trim();
   const detection = detect(original);
