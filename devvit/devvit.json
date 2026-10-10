@@ -21,7 +21,9 @@
   "triggers": {
     "onPostSubmit": "/internal/triggers/post-submit",
     "onCommentCreate": "/internal/triggers/comment-create",
-    "onMentionInCommentCreate": "/internal/triggers/mention"
+    "onMentionInCommentCreate": "/internal/triggers/mention",
+    "onAppInstall": "/internal/triggers/app-install",
+    "onAppUpgrade": "/internal/triggers/app-upgrade"
   },
   "settings": {
     "global": {
@@ -39,10 +41,16 @@
         "helpText": "Log the reply the bot would post without posting it. Leave this ON until you have read a few runs.",
         "defaultValue": true
       },
+      "replyToEverything": {
+        "type": "boolean",
+        "label": "Reply to every post",
+        "helpText": "On: every new post gets a reply whatever its flair. If the FAQ has no answer the bot says so and tells a joke, and posts that are not questions get a short friendly comment. Off: the bot only answers questions the FAQ covers and is otherwise silent.",
+        "defaultValue": true
+      },
       "autoReplyUnflaired": {
         "type": "boolean",
         "label": "Answer unflaired posts",
-        "helpText": "Off means only posts flaired Ask, Question, Admissions or Doubt are answered.",
+        "helpText": "Only used when 'Reply to every post' is off. Off means only posts flaired Ask, Question, Admissions or Doubt are answered.",
         "defaultValue": false
       },
       "minConfidence": {

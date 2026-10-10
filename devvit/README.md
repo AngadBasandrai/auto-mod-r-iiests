@@ -7,15 +7,23 @@ on r/iiests, the subreddit for IIEST Shibpur students and applicants.
 
 - **Answers new posts.** When a post is submitted, the app checks whether it is
   a genuine question, searches a bundled knowledge base of question-and-answer
-  pairs, and replies with a short answer if it is confident. If it is not
-  confident, it stays silent.
+  pairs, and replies with a short answer if it is confident.
+- **Joins in when it has no answer.** With "Reply to every post" on (the
+  default), a question the knowledge base does not cover gets an honest "I don't
+  know" and a joke, and a post that is not a question gets a short friendly
+  comment. These replies never state facts about the institute, and the app
+  stays silent on posts about distress, harassment, emergencies and similar
+  topics where a light reply would be out of place. With the setting off, the
+  app is silent whenever it has no answer.
+- **Catches up once.** When a new version is installed it replies to the four
+  newest posts, once, so it is not silent under threads posted before it
+  arrived.
 - **Answers when mentioned.** Mentioning the app in a comment asks it to answer
   the thread's question, under the same confidence gate.
 - **Removes its own replies on request.** Replying `!badbot` to one of the app's
   comments makes it delete that comment.
 
-Every reply ends with a footer saying it is a bot, that it can be wrong, and how
-to remove the reply.
+Every reply ends with a footer saying it is a bot and how to remove the reply.
 
 ## How it works
 
@@ -40,7 +48,8 @@ names, phone numbers and other personal identifiers removed.
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Dry run | On | Log the reply the app would post without posting it. |
-| Answer unflaired posts | Off | When off, only posts flaired Ask, Question, Admissions or Doubt are answered. |
+| Reply to every post | On | Reply to every new post whatever its flair, with a joke or a friendly comment when the knowledge base has no answer. |
+| Answer unflaired posts | Off | Only used when "Reply to every post" is off. When off, only posts flaired Ask, Question, Admissions or Doubt are answered. |
 | Minimum confidence | 0.7 | Score a post must clear before the app replies. |
 | Max replies per hour | 8 | Hard cap on replies. |
 | Max post age (minutes) | 120 | Older posts are never touched. |

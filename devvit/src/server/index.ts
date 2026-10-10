@@ -1,4 +1,4 @@
-// Devvit server entry. Routes the three triggers declared in devvit.json.
+// Devvit server entry. Routes the triggers declared in devvit.json.
 //
 // This replaces scripts/run_bot.py and the GitHub Actions cron. Triggers are
 // pushed by Reddit the moment a post is submitted, so there is no polling
@@ -8,6 +8,7 @@
 import { createServer, getServerPort } from '@devvit/web/server';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import { onAppInstalled } from './handlers/catchUp.js';
 import { onPostSubmit } from './handlers/postSubmit.js';
 import { onCommentCreate, onMention } from './handlers/moderation.js';
 
@@ -17,6 +18,8 @@ const ROUTES: ReadonlyMap<string, Handler> = new Map<string, Handler>([
   ['/internal/triggers/post-submit', onPostSubmit as Handler],
   ['/internal/triggers/comment-create', onCommentCreate as Handler],
   ['/internal/triggers/mention', onMention as Handler],
+  ['/internal/triggers/app-install', onAppInstalled as Handler],
+  ['/internal/triggers/app-upgrade', onAppInstalled as Handler],
 ]);
 
 async function readJson(request: IncomingMessage): Promise<unknown> {

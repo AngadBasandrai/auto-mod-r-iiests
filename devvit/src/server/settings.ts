@@ -1,14 +1,17 @@
 // Per-subreddit settings, read fresh on every trigger so a moderator can turn
 // the bot off without waiting for a redeploy.
 //
-// Every default here is the cautious one. A missing or malformed setting must
-// never make the bot post more than the moderator asked for, so `dryRun`
-// defaults to true and the numeric limits fall back to the tightest value.
+// A missing or malformed setting must never make the bot post when the
+// moderator asked it not to, so `dryRun` defaults to true and the numeric
+// limits fall back to the tightest value. `replyToEverything` is the one
+// setting that defaults to the talkative side: the subreddit asked for a bot
+// that joins in, and dry run and the hourly cap still bound it.
 
 import { settings } from '@devvit/web/server';
 
 export interface BotSettings {
   dryRun: boolean;
+  replyToEverything: boolean;
   autoReplyUnflaired: boolean;
   minConfidence: number;
   maxRepliesPerHour: number;
@@ -17,6 +20,7 @@ export interface BotSettings {
 
 const DEFAULTS: BotSettings = {
   dryRun: true,
+  replyToEverything: true,
   autoReplyUnflaired: false,
   minConfidence: 0.7,
   maxRepliesPerHour: 8,
@@ -36,6 +40,7 @@ export async function load(): Promise<BotSettings> {
       // Only an explicit false disables the dry run. Anything else — missing,
       // null, a string — stays safe.
       dryRun: all.dryRun !== false,
+      replyToEverything: all.replyToEverything !== false,
       autoReplyUnflaired: all.autoReplyUnflaired === true,
       minConfidence: num(all.minConfidence, DEFAULTS.minConfidence, 0, 1),
       maxRepliesPerHour: num(all.maxRepliesPerHour, DEFAULTS.maxRepliesPerHour, 0, 100),

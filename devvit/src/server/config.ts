@@ -29,6 +29,10 @@ export const ANSWER = {
     "\n\n---\n^(I'm a bot answering from the r/iiests FAQ and community knowledge. " +
     'I can be wrong — check with a human for anything important. Reply `!badbot` to ' +
     'remove this comment.)\n',
+  /** Under a reply that did not come from the FAQ, so it must not claim to. */
+  banterFooter:
+    "\n\n---\n^(I'm a bot, and this one isn't from the r/iiests FAQ. " +
+    'Reply `!badbot` to remove this comment.)\n',
 } as const;
 
 export const BOT = {
@@ -37,4 +41,6 @@ export const BOT = {
   removalTriggers: ['!badbot', '!delete', 'bad bot'],
   /** A reply this heavily downvoted is removed too. */
   removeBelowScore: -3,
+  /** How many of the newest posts get a reply when a new version is installed. */
+  catchUpPosts: 4,
 } as const;

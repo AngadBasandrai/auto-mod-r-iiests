@@ -2,7 +2,7 @@
 // anything worth saying.
 //
 // The gates fire in this order and every one of them defaults to staying quiet:
-//   1. flair filter          — unless the moderator opted into unflaired posts
+//   1. flair filter          — skipped when "Reply to every post" is on
 //   2. post age              — a replayed or delayed trigger can't wake old threads
 //   3. duplicate check       — Redis, fails closed
 //   4. hourly cap            — reserved before any model call, so a burst of
@@ -10,12 +10,14 @@
 //                              rejected
 //   5. retrieval confidence  — reranked top score plus corroboration
 //   6. the model's own "answerable" flag
+//      (when 5 or 6 fail and "Reply to every post" is on, the banter fallback
+//      in banter.ts speaks instead, unless it judges the post too serious)
 //   7. dry run               — logs the exact comment, posts nothing
 
 import { reddit } from '@devvit/web/server';
 import type { OnPostSubmitRequest } from '@devvit/web/shared';
 
-import { generate, renderComment, shouldPost } from '../answer.js';
+import { renderComment, respond, shouldPost } from '../answer.js';
 import { BOT } from '../config.js';
 import * as settings from '../settings.js';
 import * as state from '../state.js';
@@ -26,12 +28,14 @@ export async function onPostSubmit(payload: OnPostSubmitRequest): Promise<unknow
 
   const config = await settings.load();
 
-  const flair = post.linkFlair?.text?.trim() ?? '';
-  if (!flair && !config.autoReplyUnflaired) {
-    return { status: 'skipped', reason: 'unflaired' };
-  }
-  if (flair && !BOT.triggerFlairs.some((f) => f.toLowerCase() === flair.toLowerCase())) {
-    return { status: 'skipped', reason: `flair '${flair}' is not a trigger` };
+  if (!config.replyToEverything) {
+    const flair = post.linkFlair?.text?.trim() ?? '';
+    if (!flair && !config.autoReplyUnflaired) {
+      return { status: 'skipped', reason: 'unflaired' };
+    }
+    if (flair && !BOT.triggerFlairs.some((f) => f.toLowerCase() === flair.toLowerCase())) {
+      return { status: 'skipped', reason: `flair '${flair}' is not a trigger` };
+    }
   }
 
   // createdAt is milliseconds since the epoch.
@@ -45,14 +49,17 @@ export async function onPostSubmit(payload: OnPostSubmitRequest): Promise<unknow
   }
 
   const question = `${post.title}\n\n${post.selftext ?? ''}`.trim();
-  if (question.length < 15) return { status: 'skipped', reason: 'nothing to answer' };
+  // A one-word title like "RESULTS" is nothing to retrieve against, but it is
+  // something to react to.
+  const minLength = config.replyToEverything ? 3 : 15;
+  if (question.length < minLength) return { status: 'skipped', reason: 'nothing to answer' };
 
   // Reserved before the model calls: an over-cap post should cost nothing.
   if (!(await state.reserveReplySlot(config.maxRepliesPerHour))) {
     return { status: 'skipped', reason: 'hourly cap reached' };
   }
 
-  const answer = await generate(question, config.minConfidence);
+  const answer = await respond(question, config.minConfidence, config.replyToEverything);
 
   if (!shouldPost(answer)) {
     console.log(
@@ -81,7 +88,9 @@ export async function onPostSubmit(payload: OnPostSubmitRequest): Promise<unknow
 
   await state.markAnswered(post.id, comment.id);
   await state.markOwnComment(comment.id);
-  console.log(`Replied to ${post.id} with ${comment.id} (top ${answer.topScore.toFixed(2)})`);
+  console.log(
+    `Replied to ${post.id} with ${comment.id} (${answer.kind}, top ${answer.topScore.toFixed(2)})`
+  );
 
   return { status: 'posted', commentId: comment.id, topScore: answer.topScore };
 }

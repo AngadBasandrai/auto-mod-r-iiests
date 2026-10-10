@@ -10,7 +10,7 @@
 import { reddit } from '@devvit/web/server';
 import type { OnCommentCreateRequest, OnMentionInCommentCreateRequest } from '@devvit/web/shared';
 
-import { generate, renderComment, shouldPost } from '../answer.js';
+import { renderComment, respond, shouldPost } from '../answer.js';
 import { BOT } from '../config.js';
 import * as settings from '../settings.js';
 import * as state from '../state.js';
@@ -79,7 +79,7 @@ export async function onMention(payload: OnMentionInCommentCreateRequest): Promi
     return { status: 'skipped', reason: 'hourly cap reached' };
   }
 
-  const answer = await generate(question, config.minConfidence);
+  const answer = await respond(question, config.minConfidence, config.replyToEverything);
 
   if (!shouldPost(answer)) {
     console.log(`Staying quiet on mention ${comment.id}: ${answer.reason}`);
