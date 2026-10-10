@@ -5,10 +5,14 @@
 export const MODELS = {
   /** Query normalization and reranking — cheap and fast. */
   fast: 'gemini-3.5-flash-lite',
-  /** The user-facing answer. Handles Hindi/Hinglish generation noticeably better. */
-  strong: 'gemini-3.8-flash',
-  /** Used when `strong` is rate limited. */
-  strongFallback: 'gemini-3.5-flash',
+  /**
+   * The user-facing answer. Not the newest Flash: gemini-3.8-flash ran out of
+   * free-tier quota within the first few replies, and a bot that goes quiet
+   * mid-afternoon is worse than one that writes slightly less well.
+   */
+  strong: 'gemini-3.5-flash',
+  /** Used when `strong` is rate limited. Flash-Lite has its own, larger quota. */
+  strongFallback: 'gemini-3.5-flash-lite',
 } as const;
 
 export const RETRIEVAL = {

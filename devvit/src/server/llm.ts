@@ -22,6 +22,8 @@ const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/c
 // Gemini 3 models always think, and thinking tokens are spent out of
 // max_tokens. Without headroom a 512-token JSON reply gets cut off mid-object.
 const THINKING_HEADROOM_TOKENS = 1024;
+
+const ATTEMPTS = 3;
 const FENCE = /```(?:json)?\s*([\s\S]*?)\s*```/;
 
 export type ModelKind = 'fast' | 'strong';
@@ -70,11 +72,13 @@ async function callModel(
 
   const key = await apiKey();
 
-  // Five attempts with exponential backoff, matching the tenacity policy in the
-  // Python client. Only 429 and 5xx are worth retrying; a 400 will never fix
+  // Three attempts, one and two seconds apart. The Python client retries five
+  // times over a minute, but a trigger here has 30 seconds for the whole reply:
+  // five attempts on an exhausted quota used all of it before the fallback
+  // model got a turn. Only 429 and 5xx are worth retrying; a 400 will never fix
   // itself and a 401 means the key is wrong.
   let lastError: unknown;
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
       const response = await fetch(ENDPOINT, {
         method: 'POST',
@@ -94,14 +98,14 @@ async function callModel(
 
       const detail = await response.text().catch(() => '');
       if (response.status !== 429 && response.status < 500) {
-        throw new Error(`Gemini ${response.status}: ${detail.slice(0, 300)}`);
+        throw new Error(`Gemini ${response.status}: ${detail.slice(0, 700)}`);
       }
-      lastError = new Error(`Gemini ${response.status}: ${detail.slice(0, 300)}`);
+      lastError = new Error(`Gemini ${response.status}: ${detail.slice(0, 700)}`);
     } catch (error) {
       lastError = error;
     }
 
-    if (attempt < 5) await sleep(Math.min(60_000, 2000 * 2 ** (attempt - 1)));
+    if (attempt < ATTEMPTS) await sleep(1000 * 2 ** (attempt - 1));
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
