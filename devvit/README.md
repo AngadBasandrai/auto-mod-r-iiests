@@ -11,9 +11,11 @@ on r/iiests, the subreddit for IIEST Shibpur students and applicants.
 - **Joins in when it has no answer.** With "Reply to every post" on (the
   default), a question the knowledge base does not cover gets a reply that
   opens "I don't know, but being an LLM I can hallucinate:" followed by the
-  model's own unverified answer. That opening is fixed in the code, so an
-  ungrounded answer is always labelled as one, and the footer repeats that it
-  may be made up. A post that is not a question gets a short friendly comment.
+  deliberately absurd, obviously made-up answer, written for humour. That
+  opening is fixed in the code, so a made-up answer is always labelled as one,
+  and the footer repeats it. The answer is absurd on purpose so that nobody
+  mistakes it for advice. A post that is not a question gets a short comment in
+  the same spirit.
   The app stays silent on posts about distress, harassment, emergencies and
   similar topics where an unverified or light reply would be out of place. With
   the setting off, the app is silent whenever it has no answer.

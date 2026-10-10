@@ -26,7 +26,7 @@ import * as state from '../state.js';
 // Bump this to make the next upgrade run the catch-up again. Without it every
 // upgrade would work its way further down the listing, replying to posts the
 // bot had already chosen to leave alone.
-const RUN_KEY = 'catchup:v2';
+const RUN_KEY = 'catchup:v3';
 
 async function replyTo(
   post: { id: string; title: string; body?: string | undefined },

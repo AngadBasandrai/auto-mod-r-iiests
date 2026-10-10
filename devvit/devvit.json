@@ -44,7 +44,7 @@
       "replyToEverything": {
         "type": "boolean",
         "label": "Reply to every post",
-        "helpText": "On: every new post gets a reply whatever its flair. If the FAQ has no answer the bot says it does not know and then gives an unverified answer of its own, labelled as possibly hallucinated, and posts that are not questions get a short friendly comment. Off: the bot only answers questions the FAQ covers and is otherwise silent.",
+        "helpText": "On: every new post gets a reply whatever its flair. If the FAQ has no answer the bot says it does not know and then gives a deliberately absurd made-up answer, labelled as a hallucination, and posts that are not questions get a short friendly comment. Off: the bot only answers questions the FAQ covers and is otherwise silent.",
         "defaultValue": true
       },
       "autoReplyUnflaired": {
