@@ -1,8 +1,9 @@
 // Two secondary paths.
 //
-// onCommentCreate  — someone replying `!badbot` under one of the bot's comments
-//                    makes it delete that comment. This is the escape hatch that
-//                    lets the subreddit correct the bot without a moderator.
+// onCommentCreate  — the subreddit owner replying `!badbot` under one of the
+//                    bot's comments makes it delete that comment. Nobody else
+//                    can: left open to everyone, one person who dislikes the
+//                    bot could erase every reply it makes.
 // onMention        — someone summoning the bot with u/iiests-faq-bot in a
 //                    comment gets an answer to the thread's question, subject to
 //                    exactly the same confidence gate as a new post.
@@ -15,6 +16,27 @@ import { BOT } from '../config.js';
 import * as settings from '../settings.js';
 import * as state from '../state.js';
 
+/**
+ * Is `username` the subreddit's owner?
+ *
+ * The owner is the longest-standing human moderator. The app's own account is
+ * a moderator too wherever it is installed, so it is excluded by name. Fails
+ * closed: if the moderator list cannot be read, nobody is the owner.
+ */
+async function isSubredditOwner(username: string, subredditName: string): Promise<boolean> {
+  try {
+    const me = await reddit.getAppUser().catch(() => undefined);
+    const moderators = await reddit.getModerators({ subredditName }).all();
+    const owner = moderators
+      .filter((mod) => mod.username !== me?.username)
+      .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+    return owner !== undefined && owner.username.toLowerCase() === username.toLowerCase();
+  } catch (error) {
+    console.warn(`Could not read moderators of r/${subredditName}: ${String(error)}`);
+    return false;
+  }
+}
+
 function isRemovalRequest(body: string): boolean {
   const text = body.toLowerCase();
   return BOT.removalTriggers.some((trigger) => text.includes(trigger));
@@ -25,9 +47,16 @@ export async function onCommentCreate(payload: OnCommentCreateRequest): Promise<
   if (!comment?.body || !comment.parentId) return { status: 'skipped' };
   if (!isRemovalRequest(comment.body)) return { status: 'skipped', reason: 'not a removal' };
 
+  const author = payload.author?.name;
+  const subredditName = payload.subreddit?.name;
+  if (!author || !subredditName || !(await isSubredditOwner(author, subredditName))) {
+    console.log(`Ignoring removal request on ${comment.parentId} from u/${author ?? 'unknown'}`);
+    return { status: 'skipped', reason: 'not the subreddit owner' };
+  }
+
   // The parent must be a comment this app posted. Redis is the fast path; if it
   // has expired we ask Reddit, because a false negative here means the bot
-  // ignores a legitimate !badbot.
+  // ignores the owner's !badbot.
   const parentId = comment.parentId;
   if (!parentId.startsWith('t1_')) return { status: 'skipped', reason: 'parent is not a comment' };
 

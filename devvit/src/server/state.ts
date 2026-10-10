@@ -25,6 +25,15 @@ export async function alreadyAnswered(postId: string): Promise<boolean> {
   }
 }
 
+/** The bot's reply to this post, if it made one and Redis still remembers it. */
+export async function answerCommentId(postId: string): Promise<string | undefined> {
+  try {
+    return (await redis.get(answeredKey(postId))) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Record that the bot answered this post. */
 export async function markAnswered(postId: string, commentId: string): Promise<void> {
   try {

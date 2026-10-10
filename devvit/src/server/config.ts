@@ -27,17 +27,18 @@ export const ANSWER = {
   trustedSoloScore: 0.9,
   footer:
     "\n\n---\n^(I'm a bot answering from the r/iiests FAQ and community knowledge. " +
-    'I can be wrong — check with a human for anything important. Reply `!badbot` to ' +
-    'remove this comment.)\n',
+    'I can be wrong — check with a human for anything important.)\n',
   /** Under a reply that did not come from the FAQ, so it must not claim to. */
   banterFooter:
     "\n\n---\n^(I'm a bot, and this one isn't from the r/iiests FAQ. " +
-    'Reply `!badbot` to remove this comment.)\n',
+    'Anything above that sounds like a fact may be made up — check with a human.)\n',
+  /** Fixed in code, not left to the model, so a made-up answer is always labelled as one. */
+  hallucinationHeader: "I don't know  \nbut being an LLM  \nI can hallucinate:\n\n",
 } as const;
 
 export const BOT = {
   triggerFlairs: ['Ask', 'Question', 'Admissions', 'Doubt'],
-  /** Comment bodies containing any of these delete the bot's reply. */
+  /** From the subreddit owner, a comment containing any of these deletes the bot's reply. */
   removalTriggers: ['!badbot', '!delete', 'bad bot'],
   /** A reply this heavily downvoted is removed too. */
   removeBelowScore: -3,

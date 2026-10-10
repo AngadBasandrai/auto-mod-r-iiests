@@ -56,7 +56,9 @@ you or is about you, contact us (below) and it will be removed.
 
 ## Your choices
 
-- Reply `!badbot` to any of the app's comments and it deletes that comment.
+- The subreddit's owner can reply `!badbot` to any of the app's comments and it
+  deletes that comment. If you want one of its replies removed, ask the
+  moderators.
 - Subreddit moderators can change the app's settings or uninstall it at any
   time; uninstalling removes the app's stored data for that subreddit.
 - Deleting your post or comment on Reddit removes it from Reddit; the app keeps

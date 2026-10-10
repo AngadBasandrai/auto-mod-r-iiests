@@ -9,21 +9,24 @@ on r/iiests, the subreddit for IIEST Shibpur students and applicants.
   a genuine question, searches a bundled knowledge base of question-and-answer
   pairs, and replies with a short answer if it is confident.
 - **Joins in when it has no answer.** With "Reply to every post" on (the
-  default), a question the knowledge base does not cover gets an honest "I don't
-  know" and a joke, and a post that is not a question gets a short friendly
-  comment. These replies never state facts about the institute, and the app
-  stays silent on posts about distress, harassment, emergencies and similar
-  topics where a light reply would be out of place. With the setting off, the
-  app is silent whenever it has no answer.
-- **Catches up once.** When a new version is installed it replies to the four
-  newest posts, once, so it is not silent under threads posted before it
-  arrived.
+  default), a question the knowledge base does not cover gets a reply that
+  opens "I don't know, but being an LLM I can hallucinate:" followed by the
+  model's own unverified answer. That opening is fixed in the code, so an
+  ungrounded answer is always labelled as one, and the footer repeats that it
+  may be made up. A post that is not a question gets a short friendly comment.
+  The app stays silent on posts about distress, harassment, emergencies and
+  similar topics where an unverified or light reply would be out of place. With
+  the setting off, the app is silent whenever it has no answer.
+- **Catches up.** When it is first installed, and after a release that changes
+  how it replies, it replies once to the four newest posts, replacing any
+  earlier reply of its own on them.
 - **Answers when mentioned.** Mentioning the app in a comment asks it to answer
   the thread's question, under the same confidence gate.
-- **Removes its own replies on request.** Replying `!badbot` to one of the app's
-  comments makes it delete that comment.
+- **Removes its own replies when the subreddit owner asks.** The owner (the
+  longest-standing moderator) replying `!badbot` to one of the app's comments
+  makes it delete that comment. Nobody else can trigger this.
 
-Every reply ends with a footer saying it is a bot and how to remove the reply.
+Every reply ends with a footer saying it is a bot and that it can be wrong.
 
 ## How it works
 
@@ -48,7 +51,7 @@ names, phone numbers and other personal identifiers removed.
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Dry run | On | Log the reply the app would post without posting it. |
-| Reply to every post | On | Reply to every new post whatever its flair, with a joke or a friendly comment when the knowledge base has no answer. |
+| Reply to every post | On | Reply to every new post whatever its flair, with a labelled unverified answer or a friendly comment when the knowledge base has no answer. |
 | Answer unflaired posts | Off | Only used when "Reply to every post" is off. When off, only posts flaired Ask, Question, Admissions or Doubt are answered. |
 | Minimum confidence | 0.7 | Score a post must clear before the app replies. |
 | Max replies per hour | 8 | Hard cap on replies. |

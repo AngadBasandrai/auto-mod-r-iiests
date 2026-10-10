@@ -8,7 +8,12 @@
 // Two of the postSubmit gates are deliberately absent. The post-age cutoff
 // exists to stop a replayed trigger waking an old thread, and here waking recent
 // threads is the whole point. The hourly cap is skipped because the batch is
-// bounded by BOT.catchUpPosts already. The duplicate check and dry run stay.
+// bounded by BOT.catchUpPosts already. Dry run stays.
+//
+// The duplicate check is turned around: a post the bot already replied to gets
+// that reply deleted and a fresh one written. A catch-up only runs when
+// RUN_KEY is bumped, which is done when the bot's voice has changed enough
+// that its old replies on the front page should not be left standing.
 
 import { reddit, redis } from '@devvit/web/server';
 import type { OnAppInstallRequest, OnAppUpgradeRequest } from '@devvit/web/shared';
@@ -21,14 +26,12 @@ import * as state from '../state.js';
 // Bump this to make the next upgrade run the catch-up again. Without it every
 // upgrade would work its way further down the listing, replying to posts the
 // bot had already chosen to leave alone.
-const RUN_KEY = 'catchup:v1';
+const RUN_KEY = 'catchup:v2';
 
 async function replyTo(
   post: { id: string; title: string; body?: string | undefined },
   config: settings.BotSettings
 ): Promise<string> {
-  if (await state.alreadyAnswered(post.id)) return 'already answered';
-
   const question = `${post.title}\n\n${post.body ?? ''}`.trim();
   if (question.length < 3) return 'nothing to answer';
 
@@ -36,14 +39,17 @@ async function replyTo(
   if (!shouldPost(answer)) return `silent: ${answer.reason}`;
 
   const body = renderComment(answer);
+  const previous = await state.answerCommentId(post.id);
   if (config.dryRun) {
     console.log(
-      `DRY RUN — catch-up would reply to ${post.id} "${post.title}"\n` +
+      `DRY RUN — catch-up would ${previous ? `replace ${previous} on` : 'reply to'} ${post.id} "${post.title}"\n` +
         `${'-'.repeat(60)}\n${body}\n${'-'.repeat(60)}`
     );
     return 'dry-run';
   }
 
+  // The new reply goes up before the old one comes down, so a failed post
+  // leaves the thread with the old reply rather than with nothing.
   const comment = await reddit.submitComment({
     id: post.id as `t3_${string}`,
     text: body,
@@ -51,7 +57,15 @@ async function replyTo(
   });
   await state.markAnswered(post.id, comment.id);
   await state.markOwnComment(comment.id);
-  return `posted ${comment.id} (${answer.kind})`;
+
+  if (previous?.startsWith('t1_')) {
+    try {
+      await (await reddit.getCommentById(previous as `t1_${string}`)).delete();
+    } catch (error) {
+      console.warn(`Could not delete old reply ${previous}: ${String(error)}`);
+    }
+  }
+  return `posted ${comment.id} (${answer.kind})${previous ? `, replaced ${previous}` : ''}`;
 }
 
 export async function onAppInstalled(

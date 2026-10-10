@@ -10,8 +10,8 @@
 //                              rejected
 //   5. retrieval confidence  — reranked top score plus corroboration
 //   6. the model's own "answerable" flag
-//      (when 5 or 6 fail and "Reply to every post" is on, the banter fallback
-//      in banter.ts speaks instead, unless it judges the post too serious)
+//      (when 5 or 6 fail and "Reply to every post" is on, the fallback in
+//      banter.ts speaks instead, unless it judges the post too serious)
 //   7. dry run               — logs the exact comment, posts nothing
 
 import { reddit } from '@devvit/web/server';

@@ -57,7 +57,7 @@ const ORIGIN: Readonly<Record<string, string>> = {
 
 export interface Answer {
   text: string;
-  /** 'banter' is the ungrounded fallback: an "I don't know" and a joke, or a reaction. */
+  /** 'banter' is the ungrounded fallback: a labelled made-up answer, or a reaction. */
   kind: 'answer' | 'banter';
   hits: Hit[];
   confident: boolean;
