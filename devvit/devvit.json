@@ -25,12 +25,20 @@
     "onAppInstall": "/internal/triggers/app-install",
     "onAppUpgrade": "/internal/triggers/app-upgrade"
   },
+  "scheduler": {
+    "tasks": {
+      "learn": {
+        "endpoint": "/internal/scheduler/learn",
+        "cron": "17 */2 * * *"
+      }
+    }
+  },
   "settings": {
     "global": {
       "geminiApiKey": {
         "type": "string",
         "label": "Gemini API key",
-        "helpText": "From https://aistudio.google.com/apikey. Used for query normalization, reranking and answer generation.",
+        "helpText": "From https://aistudio.google.com/apikey. Used for query normalization, reranking, answer generation and learning from comment threads.",
         "isSecret": true
       }
     },
@@ -41,16 +49,10 @@
         "helpText": "Log the reply the bot would post without posting it. Leave this ON until you have read a few runs.",
         "defaultValue": true
       },
-      "replyToEverything": {
+      "questionFlairsOnly": {
         "type": "boolean",
-        "label": "Reply to every post",
-        "helpText": "On: every new post gets a reply whatever its flair. If the FAQ has no answer the bot says it does not know and then gives a deliberately absurd made-up answer, labelled as a hallucination, and posts that are not questions get a short friendly comment. Off: the bot only answers questions the FAQ covers and is otherwise silent.",
-        "defaultValue": true
-      },
-      "autoReplyUnflaired": {
-        "type": "boolean",
-        "label": "Answer unflaired posts",
-        "helpText": "Only used when 'Reply to every post' is off. Off means only posts flaired Ask, Question, Admissions or Doubt are answered.",
+        "label": "Question flairs only",
+        "helpText": "On: only posts flaired Ask, Question, Admissions or Doubt are considered. Off: every post is considered, and the bot still replies only when the knowledge base answers it confidently.",
         "defaultValue": false
       },
       "minConfidence": {

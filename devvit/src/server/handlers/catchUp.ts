@@ -18,7 +18,7 @@
 import { reddit, redis } from '@devvit/web/server';
 import type { OnAppInstallRequest, OnAppUpgradeRequest } from '@devvit/web/shared';
 
-import { renderComment, respond, shouldPost } from '../answer.js';
+import { generate, renderComment, shouldPost } from '../answer.js';
 import { BOT } from '../config.js';
 import * as settings from '../settings.js';
 import * as state from '../state.js';
@@ -33,9 +33,9 @@ async function replyTo(
   config: settings.BotSettings
 ): Promise<string> {
   const question = `${post.title}\n\n${post.body ?? ''}`.trim();
-  if (question.length < 3) return 'nothing to answer';
+  if (question.length < 15) return 'nothing to answer';
 
-  const answer = await respond(question, config.minConfidence, config.replyToEverything);
+  const answer = await generate(question, config.minConfidence);
   if (!shouldPost(answer)) return `silent: ${answer.reason}`;
 
   const body = renderComment(answer);
@@ -65,7 +65,7 @@ async function replyTo(
       console.warn(`Could not delete old reply ${previous}: ${String(error)}`);
     }
   }
-  return `posted ${comment.id} (${answer.kind})${previous ? `, replaced ${previous}` : ''}`;
+  return `posted ${comment.id}${previous ? `, replaced ${previous}` : ''}`;
 }
 
 export async function onAppInstalled(

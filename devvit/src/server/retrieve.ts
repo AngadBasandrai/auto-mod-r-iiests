@@ -19,7 +19,7 @@
 // http allowlist, not more prompt work.
 
 import { RETRIEVAL, ANSWER } from './config.js';
-import { bm25, records, type QaRecord } from './corpus.js';
+import { knowledge, type QaRecord } from './corpus.js';
 import { chatJson } from './llm.js';
 import type { NormalizedQuery } from './lang.js';
 
@@ -94,7 +94,7 @@ export async function search(
   query: string,
   normalized: NormalizedQuery
 ): Promise<Hit[]> {
-  const index = bm25();
+  const { index, records } = await knowledge();
 
   // Search the original wording and the normalized English separately: the
   // first catches Hinglish spellings in the corpus, the second the English

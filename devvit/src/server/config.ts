@@ -32,12 +32,21 @@ export const ANSWER = {
   footer:
     "\n\n---\n^(I'm a bot answering from the r/iiests FAQ and community knowledge. " +
     'I can be wrong — check with a human for anything important.)\n',
-  /** Under a reply that did not come from the FAQ, so it must not claim to. */
-  banterFooter:
-    "\n\n---\n^(I'm a bot, and this one isn't from the r/iiests FAQ. " +
-    'Anything above that sounds like a fact may be made up — check with a human.)\n',
-  /** Fixed in code, not left to the model, so a made-up answer is always labelled as one. */
-  hallucinationHeader: "I don't know  \nbut being an LLM  \nI can hallucinate:\n\n",
+} as const;
+
+export const LEARN = {
+  /** Threads are read once, after this long, so votes and corrections are in. */
+  minThreadAgeHours: 24,
+  /** Older threads are left alone; the bundled corpus already covers the past. */
+  maxThreadAgeDays: 14,
+  /** Only comments at this score or above are read. 1 is the author's own vote. */
+  minCommentScore: 2,
+  /** A learned record must clear this model confidence to be kept. */
+  minConfidence: 0.7,
+  /** Each scheduled run reads this many threads, within the 30 second budget. */
+  threadsPerRun: 4,
+  /** Learning stops here, so a bad month cannot swamp the curated corpus. */
+  maxRecords: 3000,
 } as const;
 
 export const BOT = {

@@ -8,20 +8,17 @@ on r/iiests, the subreddit for IIEST Shibpur students and applicants.
 - **Answers new posts.** When a post is submitted, the app checks whether it is
   a genuine question, searches a bundled knowledge base of question-and-answer
   pairs, and replies with a short answer if it is confident.
-- **Joins in when it has no answer.** With "Reply to every post" on (the
-  default), a question the knowledge base does not cover gets a reply that
-  opens "I don't know, but being an LLM I can hallucinate:" followed by the
-  deliberately absurd, obviously made-up answer, written for humour. That
-  opening is fixed in the code, so a made-up answer is always labelled as one,
-  and the footer repeats it. The answer is absurd on purpose so that nobody
-  mistakes it for advice. A post that is not a question gets a short comment in
-  the same spirit.
-  The app stays silent on posts about distress, harassment, emergencies and
-  similar topics where an unverified or light reply would be out of place. With
-  the setting off, the app is silent whenever it has no answer.
+  If it is not confident, it says nothing.
+- **Learns from the subreddit.** Every two hours it reads a few threads that are
+  at least a day old, takes the comments people upvoted, and has the language
+  model extract the facts those comments establish as new question-and-answer
+  entries. Those entries are searched alongside the bundled knowledge base, so a
+  question answered well in one thread can be answered by the app the next time
+  it is asked. The app never learns from its own comments, and drops any entry
+  that carries a phone number, email, link or username.
 - **Catches up.** When it is first installed, and after a release that changes
-  how it replies, it replies once to the four newest posts, replacing any
-  earlier reply of its own on them.
+  how it replies, it replies once to the four newest posts it can answer
+  confidently, replacing any earlier reply of its own on them.
 - **Answers when mentioned.** Mentioning the app in a comment asks it to answer
   the thread's question, under the same confidence gate.
 - **Removes its own replies when the subreddit owner asks.** The owner (the
@@ -36,6 +33,7 @@ Every reply ends with a footer saying it is a bot and that it can be wrong.
    model.
 2. BM25 search over the bundled knowledge base finds candidate entries, which
    the model reranks.
+   Learned entries from r/iiests threads are part of the same index.
 3. If the top score clears the moderator-set threshold, the model writes an
    answer using only the retrieved entries.
 
@@ -53,16 +51,18 @@ names, phone numbers and other personal identifiers removed.
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Dry run | On | Log the reply the app would post without posting it. |
-| Reply to every post | On | Reply to every new post whatever its flair, with a labelled unverified answer or a friendly comment when the knowledge base has no answer. |
-| Answer unflaired posts | Off | Only used when "Reply to every post" is off. When off, only posts flaired Ask, Question, Admissions or Doubt are answered. |
+| Question flairs only | Off | When on, only posts flaired Ask, Question, Admissions or Doubt are considered. When off, every post is considered and the confidence gate decides. |
 | Minimum confidence | 0.7 | Score a post must clear before the app replies. |
 | Max replies per hour | 8 | Hard cap on replies. |
 | Max post age (minutes) | 120 | Older posts are never touched. |
 
 ## Data
 
-The app stores only the IDs of posts it answered and of its own comments (30
-days) and an hourly reply counter. It does not store post text or usernames.
+The app stores the IDs of posts it answered and of its own comments (30 days),
+an hourly reply counter, the IDs of threads it has learned from, and the
+question-and-answer entries it learned. Learned entries are written by the
+model as general facts, without usernames or contact details. It does not store
+the text of posts or comments, or usernames.
 
 - [Privacy policy](https://github.com/AngadBasandrai/auto-mod-r-iiests/blob/main/devvit/PRIVACY.md)
 - [Terms & conditions](https://github.com/AngadBasandrai/auto-mod-r-iiests/blob/main/devvit/TERMS.md)

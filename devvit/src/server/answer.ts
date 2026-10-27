@@ -6,7 +6,6 @@
 //      top of the retrieval score.
 //   2. The reply comes back in the language and script the question used.
 
-import { banter } from './banter.js';
 import { ANSWER } from './config.js';
 import { chatJson } from './llm.js';
 import { contentWords, normalizeQuery, replyStyle, type NormalizedQuery } from './lang.js';
@@ -53,12 +52,11 @@ const ORIGIN: Readonly<Record<string, string>> = {
   reddit_thread: 'past thread',
   student_wiki: 'IIEST student wiki',
   whatsapp: 'student community knowledge',
+  reddit_comments: 'answers in r/iiests threads',
 };
 
 export interface Answer {
   text: string;
-  /** 'banter' is the ungrounded fallback: a labelled made-up answer, or a reaction. */
-  kind: 'answer' | 'banter';
   hits: Hit[];
   confident: boolean;
   topScore: number;
@@ -67,7 +65,7 @@ export interface Answer {
 }
 
 function empty(reason: string, hits: Hit[] = [], top = 0, supporting = 0): Answer {
-  return { text: '', kind: 'answer', hits, confident: false, topScore: top, supporting, reason };
+  return { text: '', hits, confident: false, topScore: top, supporting, reason };
 }
 
 export function shouldPost(answer: Answer): boolean {
@@ -207,7 +205,6 @@ export async function generate(
 
   return {
     text: text + sourcesLine(hits, used),
-    kind: 'answer',
     hits,
     confident: true,
     topScore: top,
@@ -216,30 +213,7 @@ export async function generate(
   };
 }
 
-/**
- * The reply for a post: a grounded answer when the FAQ has one, and otherwise,
- * if `replyToEverything` is on, the banter fallback.
- *
- * The normalizer runs once and is shared, so the fallback costs one extra model
- * call rather than two.
- */
-export async function respond(
-  question: string,
-  minConfidence: number,
-  replyToEverything: boolean
-): Promise<Answer> {
-  const normalized = await normalizeQuery(question);
-  const answer = await generate(question, minConfidence, normalized);
-  if (shouldPost(answer) || !replyToEverything) return answer;
-
-  const text = await banter(question, normalized);
-  if (!text) return { ...answer, reason: `${answer.reason}; nothing fitting to say instead` };
-
-  return { ...answer, text, kind: 'banter', confident: true, reason: `banter (${answer.reason})` };
-}
-
 /** The full Reddit comment body, including the bot footer. */
 export function renderComment(answer: Answer): string {
-  const footer = answer.kind === 'banter' ? ANSWER.banterFooter : ANSWER.footer;
-  return answer.text.trimEnd() + '\n' + footer.trimEnd() + '\n';
+  return answer.text.trimEnd() + '\n' + ANSWER.footer.trimEnd() + '\n';
 }

@@ -12,15 +12,15 @@ to these terms.
 The app reads new posts on the subreddit, and when it is confident a post asks a
 question its knowledge base covers, it posts a reply. It also answers when
 mentioned in a comment, and deletes its own reply when the subreddit's owner
-responds to it with `!badbot`. When its knowledge base has no answer, it may
-instead post a deliberately absurd, made-up answer for humour, which it labels
-as a hallucination, or a short comment on the post in the same spirit.
+responds to it with `!badbot`. When it is not confident, it does not reply. It
+also learns from the subreddit: facts established by upvoted comments in older
+threads are added to its knowledge base.
 
 ## Answers are not official
 
 Replies are generated automatically by a language model from a community-sourced
-knowledge base, and some are generated without it and labelled as possibly
-hallucinated. They can be wrong, incomplete, out of date or entirely made up. The app is an
+knowledge base, part of which is learned automatically from subreddit comments.
+They can be wrong, incomplete or out of date. The app is an
 unofficial student project and is **not affiliated with, endorsed by, or
 speaking for IIEST Shibpur** or any other institution. Do not rely on its
 answers for admissions, fees, deadlines, academic or any other important

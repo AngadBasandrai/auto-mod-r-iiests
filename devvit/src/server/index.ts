@@ -9,17 +9,27 @@ import { createServer, getServerPort } from '@devvit/web/server';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { onAppInstalled } from './handlers/catchUp.js';
+import { onLearn } from './handlers/learn.js';
 import { onPostSubmit } from './handlers/postSubmit.js';
 import { onCommentCreate, onMention } from './handlers/moderation.js';
 
 type Handler = (payload: unknown) => Promise<unknown>;
 
+// A new version also runs a learning pass straight away, so a release can be
+// checked in the logs without waiting for the next scheduled run.
+async function onInstalledOrUpgraded(payload: unknown): Promise<unknown> {
+  const catchUp = await onAppInstalled(payload as Parameters<typeof onAppInstalled>[0]);
+  const learn = await onLearn();
+  return { catchUp, learn };
+}
+
 const ROUTES: ReadonlyMap<string, Handler> = new Map<string, Handler>([
   ['/internal/triggers/post-submit', onPostSubmit as Handler],
   ['/internal/triggers/comment-create', onCommentCreate as Handler],
   ['/internal/triggers/mention', onMention as Handler],
-  ['/internal/triggers/app-install', onAppInstalled as Handler],
-  ['/internal/triggers/app-upgrade', onAppInstalled as Handler],
+  ['/internal/triggers/app-install', onInstalledOrUpgraded],
+  ['/internal/triggers/app-upgrade', onInstalledOrUpgraded],
+  ['/internal/scheduler/learn', onLearn as Handler],
 ]);
 
 async function readJson(request: IncomingMessage): Promise<unknown> {
